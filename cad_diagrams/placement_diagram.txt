@@ -1,0 +1,30 @@
+a = angle between sensors
+b = depth of mobile platform body
+c = depth of the ultrasonic transducer
+d = ultrasonic transducer beam angle
+
+e = length of perpendicular line between mobile platform centre and chord of circle (dotted) with radius equal to mobile platform depth and transducer depth combined
+f = angle between transducer beam boundary and base of triangle forming blind spot
+g = angle between base of triangle formed by blind spot and line on which transducer is mounted
+h = base of right angle triangle created by splitting isosoles triangle forming sensor blind spot
+i = height of isosoles triangle forming by splitting isosoles triangle forming sensor blind spot
+
+j = intersection point of transducer beam patterns from transducer face, the distance at which the range finder blind spot starts
+
+a = given
+b = given
+c = given
+d = given
+
+e = (b + c) * cos(a/2) -> due to right angle triangle formed when bisecting angle a
+180 = (d / 2) + f + g -> due to the bisection of angle d and isosoles triangle formed between a and the two lines on which the transducers are mounted
+180 = a + (2 * g) -> due to isosoles triangle formed between a and the two lines on which the transducers are mounted
+f = 180 - (d / 2) - g
+g = (180 - a) / 2
+h = (b + c) * sin(a / 2)
+i = h * tan(f)
+j = i - (b + c - e)
+
+j = (((b + c) * sin(a / 2)) * tan((180 - (d / 2) - ((180 - a) / 2)))) - (b + c - ((b + c) * cos(a/2)))
+
+j = (b+c) (sin(a/2) tan(1/2 (a-d+180))+cos(a/2)-1)
