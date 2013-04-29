@@ -97,28 +97,29 @@ float refDist = 0;
 float triggerMin = TRIGGER_BASE - TRIGGER_DEFAULT_OFFSET;
 float triggerMax = TRIGGER_BASE + TRIGGER_DEFAULT_OFFSET;
 
-//Stats indexes and values
-int peakIndexMinFirst = -1;
-int peakIndexMaxFirst = -1;
+//Stats - first to exceed triggers
+int peakIndexFirstMin = -1;
+int peakIndexFirstMax = -1;
+float peakTimeFirstMin = 0;
+float peakTimeFirstMax = 0;
+
+//Stats - minimum and maxinimum values exceeding triggers
 int peakIndexMin = -1;
 int peakIndexMax = -1;
-
-float peakMin = Float.MAX_VALUE;
-float peakMax = Float.MIN_VALUE;
-
-float peakTimeMinFirst = 0;
-float peakTimeMaxFirst = 0;
+float peakValMin = Float.MAX_VALUE;
+float peakValMax = Float.MIN_VALUE;
 float peakTimeMin = 0;
 float peakTimeMax = 0;
 
-float avgPeakMin = 0;
-int avgPeakMinCount = 0;
-float avgPeakMax = 0;
-int avgPeakMaxCount = 0;
-float avgPeakMinFirst = 0;
-int avgPeakMinFirstCount = 0;
-float avgPeakMaxFirst = 0;
-int avgPeakMaxFirstCount = 0;
+//Averages
+float avgPeakTimeMin = 0;
+int avgPeakTimeMinCount = 0;
+float avgPeakTimeMax = 0;
+int avgPeakTimeMaxCount = 0;
+float avgPeakTimeFirstMin = 0;
+int avgPeakTimeFirstMinCount = 0;
+float avgPeakTimeFirstMax = 0;
+int avgPeakTimeFirstMaxCount = 0;
 
 void setup() { 
   //Set window size
@@ -371,12 +372,12 @@ void processSample(String sInput, boolean log) {
         dataIndex = 0;
 
         //Reset peak index and peak
-        peakIndexMinFirst = -1;
-        peakIndexMaxFirst = -1;
+        peakIndexFirstMin = -1;
+        peakIndexFirstMax = -1;
         peakIndexMin = -1;
         peakIndexMax = -1;
-        peakMin = Float.MAX_VALUE;
-        peakMax = Float.MIN_VALUE;
+        peakValMin = Float.MAX_VALUE;
+        peakValMax = Float.MIN_VALUE;
 
         //Change state
         state = SAMPLING;
@@ -393,8 +394,8 @@ void processSample(String sInput, boolean log) {
             peakTimeMin = peakIndexMin * SAMPLE_PERIOD;
             
             //Update average
-            avgPeakMin += peakTimeMin;
-            avgPeakMinCount++;
+            avgPeakTimeMin += peakTimeMin;
+            avgPeakTimeMinCount++;
           } 
           else {
             peakTimeMin = 0;
@@ -406,38 +407,38 @@ void processSample(String sInput, boolean log) {
             peakTimeMax = peakIndexMax * SAMPLE_PERIOD;
             
             //Update average
-            avgPeakMax += peakTimeMax;
-            avgPeakMaxCount++;
+            avgPeakTimeMax += peakTimeMax;
+            avgPeakTimeMaxCount++;
           } 
           else {
             peakTimeMax = 0;
           }
           
-          //Update min first time
-          if (peakIndexMinFirst != -1) {
+          //Update first min time
+          if (peakIndexFirstMin != -1) {
             //Update time
-            peakTimeMinFirst = peakIndexMinFirst * SAMPLE_PERIOD;
+            peakTimeFirstMin = peakIndexFirstMin * SAMPLE_PERIOD;
             
             //Update average
-            avgPeakMinFirst += peakTimeMinFirst;
-            avgPeakMinFirstCount++;
+            avgPeakTimeFirstMin += peakTimeFirstMin;
+            avgPeakTimeFirstMinCount++;
 
           } 
           else {
-            peakTimeMinFirst = 0;
+            peakTimeFirstMin = 0;
           }
 
-          //Update max first time
-          if (peakIndexMaxFirst != -1) {
+          //Update first max time
+          if (peakIndexFirstMax != -1) {
             //Update time
-            peakTimeMaxFirst = peakIndexMaxFirst * SAMPLE_PERIOD;
+            peakTimeFirstMax = peakIndexFirstMax * SAMPLE_PERIOD;
             
             //Update average
-            avgPeakMaxFirst += peakTimeMaxFirst;
-            avgPeakMaxFirstCount++;
+            avgPeakTimeFirstMax += peakTimeFirstMax;
+            avgPeakTimeFirstMaxCount++;
           } 
           else {
-            peakTimeMaxFirst = 0;
+            peakTimeFirstMax = 0;
           }
           
           //Log sample
@@ -475,18 +476,28 @@ void processSample(String sInput, boolean log) {
       //Map value to voltage
       float fVoltage = map(fInput, VAL_MIN, VAL_MAX, VOLT_MIN, VOLT_MAX);
 
-      //Update if smaller voltage (below limit) has been found
-      if (fVoltage < triggerMin && fVoltage < peakMin) {
-        if(peakIndexMinFirst == -1) peakIndexMinFirst = dataIndex;
-        peakIndexMin = dataIndex;
-        peakMin = fVoltage;
+      //Check lower trigger
+      if (fVoltage < triggerMin) {
+        //Set first min index the first time trigger exceeded
+        if(peakIndexFirstMin == -1) peakIndexFirstMin = dataIndex;
+        
+        //Update min index if minimum voltage exceeded
+        if(fVoltage < peakValMin) {
+          peakIndexMin = dataIndex;
+          peakValMin = fVoltage;
+        }
       }
 
-      //Update if larger voltage (above limit) has been found
-      if (fVoltage > triggerMax && fVoltage > peakMax) {
-        if(peakIndexMaxFirst == -1) peakIndexMaxFirst = dataIndex;
-        peakIndexMax = dataIndex;
-        peakMax = fVoltage;
+      //Check upper trigger
+      if (fVoltage > triggerMax) {
+        //Set first max index the first time trigger exceeded
+        if(peakIndexFirstMax == -1) peakIndexFirstMax = dataIndex;
+        
+        //Update max index if maximum voltage exceeded
+        if(fVoltage > peakValMax) {
+          peakIndexMax = dataIndex;
+          peakValMax = fVoltage;
+        }
       }
     }
   }
@@ -499,7 +510,7 @@ void getRefDistance() {
       String sRefDist = JOptionPane.showInputDialog(null, "Distance (cm)", "Distance Ref", JOptionPane.PLAIN_MESSAGE);
       
       //Check and parse response
-      if(sRefDist != "") {
+      if(sRefDist != null && sRefDist != "") {
         refDist = parseFloat(sRefDist);
       } else {
         refDist = 0;
@@ -509,14 +520,14 @@ void getRefDistance() {
 }
 
 void resetAverages() {
-  avgPeakMin = 0;
-  avgPeakMinCount = 0;
-  avgPeakMax = 0;
-  avgPeakMaxCount = 0;
-  avgPeakMinFirst = 0;
-  avgPeakMinFirstCount = 0;
-  avgPeakMaxFirst = 0;
-  avgPeakMaxFirstCount = 0;
+  avgPeakTimeMin = 0;
+  avgPeakTimeMinCount = 0;
+  avgPeakTimeMax = 0;
+  avgPeakTimeMaxCount = 0;
+  avgPeakTimeFirstMin = 0;
+  avgPeakTimeFirstMinCount = 0;
+  avgPeakTimeFirstMax = 0;
+  avgPeakTimeFirstMaxCount = 0;
 }
 
 void keyPressed() { 
@@ -631,31 +642,31 @@ void keyPressed() {
   }
 }
 
-float calcAvgPeakMinTime() {
-  return (avgPeakMinCount > 0 ? avgPeakMin / avgPeakMinCount : 0);
+float calcAvgPeakTimeMin() {
+  return (avgPeakTimeMinCount > 0 ? avgPeakTimeMin / avgPeakTimeMinCount : 0);
 }
 
-float calcAvgPeakMaxTime() {
-  return (avgPeakMaxCount > 0 ? avgPeakMax / avgPeakMaxCount : 0);
+float calcAvgPeakTimeMax() {
+  return (avgPeakTimeMaxCount > 0 ? avgPeakTimeMax / avgPeakTimeMaxCount : 0);
 }
 
-float calcAvgPeakMinFirstTime() {
-  return (avgPeakMinFirstCount > 0 ? avgPeakMinFirst / avgPeakMinFirstCount : 0);
+float calcAvgPeakTimeFirstMin() {
+  return (avgPeakTimeFirstMinCount > 0 ? avgPeakTimeFirstMin / avgPeakTimeFirstMinCount : 0);
 }
 
-float calcAvgPeakMaxFirstTime() {
-  return (avgPeakMaxFirstCount > 0 ? avgPeakMaxFirst / avgPeakMaxFirstCount : 0);
+float calcAvgPeakTimeFirstMax() {
+  return (avgPeakTimeFirstMaxCount > 0 ? avgPeakTimeFirstMax / avgPeakTimeFirstMaxCount : 0);
 }
 
 void printAverages(String prefix) {
   //Calculate average times
-  float avgPeakMinTime = calcAvgPeakMinTime();
-  float avgPeakMaxTime = calcAvgPeakMaxTime();
-  float avgPeakMinFirstTime = calcAvgPeakMinFirstTime();
-  float avgPeakMaxFirstTime = calcAvgPeakMaxFirstTime();
+  float avgPeakMinTime = calcAvgPeakTimeMin();
+  float avgPeakMaxTime = calcAvgPeakTimeMax();
+  float avgPeakFirstMinTime = calcAvgPeakTimeFirstMin();
+  float avgPeakFirstMaxTime = calcAvgPeakTimeFirstMax();
   
   //Output csv string
-  println(prefix + (prefix != "" ? "," : "") + avgPeakMinTime + "," + avgPeakMaxTime + "," + avgPeakMinFirstTime + "," + avgPeakMaxFirstTime);
+  println(prefix + (prefix != "" ? "," : "") + avgPeakMinTime + "," + avgPeakMaxTime + "," + avgPeakFirstMinTime + "," + avgPeakFirstMaxTime);
 }
 
 void draw() {  
@@ -695,10 +706,10 @@ void draw() {
   text(strState, width, 10);
 
   //Calculate average times
-  float avgPeakMinTime = calcAvgPeakMinTime();
-  float avgPeakMaxTime = calcAvgPeakMaxTime();
-  float avgPeakMinFirstTime = calcAvgPeakMinFirstTime();
-  float avgPeakMaxFirstTime = calcAvgPeakMaxFirstTime();
+  float avgPeakMinTime = calcAvgPeakTimeMin();
+  float avgPeakMaxTime = calcAvgPeakTimeMax();
+  float avgPeakFirstMinTime = calcAvgPeakTimeFirstMin();
+  float avgPeakFirstMaxTime = calcAvgPeakTimeFirstMax();
 
   //Output times and distances
   text("RT Min: " + nf(peakTimeMin, 1, 2) + "uS / " + nf(peakTimeMin * SPEED_OF_SOUND, 1, 2) + "cm", width, 30);
@@ -707,11 +718,11 @@ void draw() {
   text("RT Min Avg: " + nf(avgPeakMinTime, 1, 2) + "uS / " + nf(avgPeakMinTime * SPEED_OF_SOUND, 1, 2) + "cm", width, 65);
   text("RT Max Avg: " + nf(avgPeakMaxTime, 1, 2) + "uS / " + nf(avgPeakMaxTime * SPEED_OF_SOUND, 1, 2) + "cm", width, 80);
   
-  text("RT Min First: " + nf(peakTimeMinFirst, 1, 2) + "uS / " + nf(peakTimeMinFirst * SPEED_OF_SOUND, 1, 2) + "cm", width, 100);
-  text("RT Max First: " + nf(peakTimeMaxFirst, 1, 2) + "uS / " + nf(peakTimeMaxFirst * SPEED_OF_SOUND, 1, 2) + "cm", width, 115);
+  text("RT Min First: " + nf(peakTimeFirstMin, 1, 2) + "uS / " + nf(peakTimeFirstMin * SPEED_OF_SOUND, 1, 2) + "cm", width, 100);
+  text("RT Max First: " + nf(peakTimeFirstMax, 1, 2) + "uS / " + nf(peakTimeFirstMax * SPEED_OF_SOUND, 1, 2) + "cm", width, 115);
 
-  text("RT Min First Avg: " + nf(avgPeakMinFirstTime, 1, 2) + "uS / " + nf(avgPeakMinFirstTime * SPEED_OF_SOUND, 1, 2) + "cm", width, 135);
-  text("RT Max First Avg: " + nf(avgPeakMaxFirstTime, 1, 2) + "uS / " + nf(avgPeakMaxFirstTime * SPEED_OF_SOUND, 1, 2) + "cm", width, 150);
+  text("RT Min First Avg: " + nf(avgPeakFirstMinTime, 1, 2) + "uS / " + nf(avgPeakFirstMinTime * SPEED_OF_SOUND, 1, 2) + "cm", width, 135);
+  text("RT Max First Avg: " + nf(avgPeakFirstMaxTime, 1, 2) + "uS / " + nf(avgPeakFirstMaxTime * SPEED_OF_SOUND, 1, 2) + "cm", width, 150);
 
   //Output trigger levels
   float tMin = map(triggerMin, VOLT_MIN, VOLT_MAX, 0, height);
