@@ -391,7 +391,7 @@ void processSample(String sInput, boolean log) {
           //Update min peak time
           if (peakIndexMin != -1) {
             //Update time
-            peakTimeMin = peakIndexMin * SAMPLE_PERIOD;
+            peakTimeMin = (peakIndexMin * SAMPLE_PERIOD) / 2;
             
             //Update average
             avgPeakTimeMin += peakTimeMin;
@@ -404,7 +404,7 @@ void processSample(String sInput, boolean log) {
           //Update max peak time
           if (peakIndexMax != -1) {
             //Update time
-            peakTimeMax = peakIndexMax * SAMPLE_PERIOD;
+            peakTimeMax = (peakIndexMax * SAMPLE_PERIOD) / 2;
             
             //Update average
             avgPeakTimeMax += peakTimeMax;
@@ -417,7 +417,7 @@ void processSample(String sInput, boolean log) {
           //Update first min time
           if (peakIndexFirstMin != -1) {
             //Update time
-            peakTimeFirstMin = peakIndexFirstMin * SAMPLE_PERIOD;
+            peakTimeFirstMin = (peakIndexFirstMin * SAMPLE_PERIOD) / 2;
             
             //Update average
             avgPeakTimeFirstMin += peakTimeFirstMin;
@@ -431,7 +431,7 @@ void processSample(String sInput, boolean log) {
           //Update first max time
           if (peakIndexFirstMax != -1) {
             //Update time
-            peakTimeFirstMax = peakIndexFirstMax * SAMPLE_PERIOD;
+            peakTimeFirstMax = (peakIndexFirstMax * SAMPLE_PERIOD) / 2;
             
             //Update average
             avgPeakTimeFirstMax += peakTimeFirstMax;
@@ -699,11 +699,15 @@ void draw() {
     strState = "Error!";
     break;
   }
-  if (continuous) strState = "Continuous " + strState; 
+  if (continuous) strState = "Continuous " + strState;
+  
+  //Label y position
+  int tmpY = 10;
 
   //Set text alignment and output text
   textAlign(RIGHT, CENTER);
-  text(strState, width, 10);
+  text(strState, width, tmpY);
+  tmpY += 20;
 
   //Calculate average times
   float avgPeakMinTime = calcAvgPeakTimeMin();
@@ -712,17 +716,19 @@ void draw() {
   float avgPeakFirstMaxTime = calcAvgPeakTimeFirstMax();
 
   //Output times and distances
-  text("RT Min: " + nf(peakTimeMin, 1, 2) + "uS / " + nf(peakTimeMin * SPEED_OF_SOUND, 1, 2) + "cm", width, 30);
-  text("RT Max: " + nf(peakTimeMax, 1, 2) + "uS / " + nf(peakTimeMax * SPEED_OF_SOUND, 1, 2) + "cm", width, 45);
-  
-  text("RT Min Avg: " + nf(avgPeakMinTime, 1, 2) + "uS / " + nf(avgPeakMinTime * SPEED_OF_SOUND, 1, 2) + "cm", width, 65);
-  text("RT Max Avg: " + nf(avgPeakMaxTime, 1, 2) + "uS / " + nf(avgPeakMaxTime * SPEED_OF_SOUND, 1, 2) + "cm", width, 80);
-  
-  text("RT Min First: " + nf(peakTimeFirstMin, 1, 2) + "uS / " + nf(peakTimeFirstMin * SPEED_OF_SOUND, 1, 2) + "cm", width, 100);
-  text("RT Max First: " + nf(peakTimeFirstMax, 1, 2) + "uS / " + nf(peakTimeFirstMax * SPEED_OF_SOUND, 1, 2) + "cm", width, 115);
+  text("Min: " + nf(peakTimeFirstMin, 1, 2) + "uS / " + nf(peakTimeFirstMin * SPEED_OF_SOUND, 1, 2) + "cm", width, tmpY); tmpY += 15;
+  text("Max: " + nf(peakTimeFirstMax, 1, 2) + "uS / " + nf(peakTimeFirstMax * SPEED_OF_SOUND, 1, 2) + "cm", width, tmpY); tmpY += 20;
 
-  text("RT Min First Avg: " + nf(avgPeakFirstMinTime, 1, 2) + "uS / " + nf(avgPeakFirstMinTime * SPEED_OF_SOUND, 1, 2) + "cm", width, 135);
-  text("RT Max First Avg: " + nf(avgPeakFirstMaxTime, 1, 2) + "uS / " + nf(avgPeakFirstMaxTime * SPEED_OF_SOUND, 1, 2) + "cm", width, 150);
+  text("Min Avg: " + nf(avgPeakFirstMinTime, 1, 2) + "uS / " + nf(avgPeakFirstMinTime * SPEED_OF_SOUND, 1, 2) + "cm", width, tmpY); tmpY += 15;
+  text("Max Avg: " + nf(avgPeakFirstMaxTime, 1, 2) + "uS / " + nf(avgPeakFirstMaxTime * SPEED_OF_SOUND, 1, 2) + "cm", width, tmpY); tmpY += 20;
+
+  /*  
+  text("Min Val: " + nf(peakTimeMin, 1, 2) + "uS / " + nf(peakTimeMin * SPEED_OF_SOUND, 1, 2) + "cm", width, tmpY); tmpY += 15;
+  text("Max Val: " + nf(peakTimeMax, 1, 2) + "uS / " + nf(peakTimeMax * SPEED_OF_SOUND, 1, 2) + "cm", width, tmpY); tmpY += 20;
+  
+  text("Min Val Avg: " + nf(avgPeakMinTime, 1, 2) + "uS / " + nf(avgPeakMinTime * SPEED_OF_SOUND, 1, 2) + "cm", width, tmpY); tmpY += 15;
+  text("Max Val Avg: " + nf(avgPeakMaxTime, 1, 2) + "uS / " + nf(avgPeakMaxTime * SPEED_OF_SOUND, 1, 2) + "cm", width, tmpY); tmpY += 20;
+  */
 
   //Output trigger levels
   float tMin = map(triggerMin, VOLT_MIN, VOLT_MAX, 0, height);
