@@ -48,7 +48,7 @@ final static int MARKER_WIDTH = 5;
 final static float TRIGGER_BASE = 1.6; //Default trigger voltage for distance detection
 final static float TRIGGER_DEFAULT_OFFSET = 0.05; //Default amount trigger is away from base value
 final static float TRIGGER_CHANGE = 0.025; //Amount to inc / dec trigger voltage by per key stroke
-final static float SPEED_OF_SOUND = 0.03432; //cm / uS
+final static float SPEED_OF_SOUND = 0.034399; //cm / uS
 
 final static float SAMPLE_PERIOD = (1.0 / SAMPLE_RATE) * 1000000;
 final static int DATA_SIZE = int(SAMPLE_TIME / SAMPLE_PERIOD);
