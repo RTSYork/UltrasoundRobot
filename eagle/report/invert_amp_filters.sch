@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!DOCTYPE eagle SYSTEM "eagle.dtd">
-<eagle version="6.3">
+<eagle version="6.4">
 <drawing>
 <settings>
 <setting alwaysvectorfont="no"/>
@@ -5536,6 +5536,8 @@ Metric Code Size 5664</description>
 <part name="R4" library="resistor" deviceset="R-EU_" device="0204/7"/>
 <part name="P+1" library="supply1" deviceset="VCC" device=""/>
 <part name="GND1" library="supply1" deviceset="GND" device=""/>
+<part name="P+2" library="supply1" deviceset="VCC" device=""/>
+<part name="GND2" library="supply1" deviceset="GND" device=""/>
 </parts>
 <sheets>
 <sheet>
@@ -5551,6 +5553,9 @@ Metric Code Size 5664</description>
 <instance part="R4" gate="G$1" x="48.26" y="38.1" rot="R180"/>
 <instance part="P+1" gate="VCC" x="27.94" y="43.18"/>
 <instance part="GND1" gate="1" x="53.34" y="33.02"/>
+<instance part="IC1" gate="P" x="91.44" y="48.26"/>
+<instance part="P+2" gate="VCC" x="91.44" y="60.96"/>
+<instance part="GND2" gate="1" x="91.44" y="35.56"/>
 </instances>
 <busses>
 </busses>
@@ -5605,12 +5610,22 @@ Metric Code Size 5664</description>
 <pinref part="P+1" gate="VCC" pin="VCC"/>
 <wire x1="27.94" y1="40.64" x2="27.94" y2="38.1" width="0.1524" layer="91"/>
 </segment>
+<segment>
+<pinref part="IC1" gate="P" pin="V+"/>
+<pinref part="P+2" gate="VCC" pin="VCC"/>
+<wire x1="91.44" y1="58.42" x2="91.44" y2="55.88" width="0.1524" layer="91"/>
+</segment>
 </net>
 <net name="GND" class="0">
 <segment>
 <pinref part="R4" gate="G$1" pin="1"/>
 <pinref part="GND1" gate="1" pin="GND"/>
 <wire x1="53.34" y1="35.56" x2="53.34" y2="38.1" width="0.1524" layer="91"/>
+</segment>
+<segment>
+<pinref part="IC1" gate="P" pin="V-"/>
+<pinref part="GND2" gate="1" pin="GND"/>
+<wire x1="91.44" y1="38.1" x2="91.44" y2="40.64" width="0.1524" layer="91"/>
 </segment>
 </net>
 <net name="N$6" class="0">
