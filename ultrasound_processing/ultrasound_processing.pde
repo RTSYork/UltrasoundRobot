@@ -39,12 +39,15 @@ final static String LOG_FILE_NAME = "ultrasound_log_"; //Prefix of log file name
 final static int DEFAULT_PAGE_SIZE = 250; //Samples per screen
 final static int PAGE_CHANGE = 10; //Amount to inc / dec page size by per key stroke
 
+final static boolean ENABLE_TRIGGER_BASE_LINE = false; //Enable line at trigger base (op-amp ref voltage)
+
 final static float SCALE_PRES_VERT = 0.1; //V
 final static float SCALE_PRES_HORIZ = 100; //uS
 final static int MARKER_WIDTH = 5;
 
-final static float TRIGGER_BASE = 1.75; //(VOLT_MAX - VOLT_MIN) / 2.0; //Default trigger voltage for distance detection
-final static float TRIGGER_CHANGE = 0.05; //Amount to inc / dec trigger voltage by per key stroke
+final static float TRIGGER_BASE = 1.6; //Default trigger voltage for distance detection
+final static float TRIGGER_DEFAULT_OFFSET = 0.05; //Default amount trigger is away from base value
+final static float TRIGGER_CHANGE = 0.025; //Amount to inc / dec trigger voltage by per key stroke
 final static float SPEED_OF_SOUND = 0.03432; //cm / uS
 
 final static float SAMPLE_PERIOD = (1.0 / SAMPLE_RATE) * 1000000;
@@ -91,8 +94,8 @@ int pageNo = 0;
 float refDist = 0;
 
 //Trigger levels
-float triggerMin = TRIGGER_BASE - TRIGGER_CHANGE;
-float triggerMax = TRIGGER_BASE + TRIGGER_CHANGE;
+float triggerMin = TRIGGER_BASE - TRIGGER_DEFAULT_OFFSET;
+float triggerMax = TRIGGER_BASE + TRIGGER_DEFAULT_OFFSET;
 
 //Stats indexes and values
 int peakIndexMinFirst = -1;
@@ -722,8 +725,10 @@ void draw() {
   stroke(0);
 
   //Output center
-  float halfV = map((VOLT_MAX - VOLT_MIN) / 2, VOLT_MIN, VOLT_MAX, 0, height); 
-  line(0, height - halfV, width, height - halfV);
+  if(ENABLE_TRIGGER_BASE_LINE) {
+    float trigBase = map(TRIGGER_BASE, VOLT_MIN, VOLT_MAX, 0, height); 
+    line(0, height - trigBase, width, height - trigBase);
+  }
 
   //Set text alignment and output horizontal scale
   textAlign(LEFT, CENTER);
