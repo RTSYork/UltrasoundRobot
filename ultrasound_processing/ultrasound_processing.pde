@@ -123,10 +123,13 @@ int avgPeakTimeFirstMaxCount = 0;
 
 void setup() { 
   //Set window size
-  size(1300, 1000);
+  size(500, 250);
 
-  //Make sketch resizable
-  if (frame != null) frame.setResizable(true);
+  //Make sketch resizable and set title
+  if (frame != null) {
+    frame.setResizable(true);
+    frame.setTitle("Ultrasound!");
+  }
 
   //Enable anti-aliasing
   smooth();
