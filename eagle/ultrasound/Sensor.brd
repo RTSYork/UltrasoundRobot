@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!DOCTYPE eagle SYSTEM "eagle.dtd">
-<eagle version="6.4">
+<eagle version="6.3">
 <drawing>
 <settings>
 <setting alwaysvectorfont="no"/>
@@ -1636,12 +1636,12 @@ design rules under a new name.</description>
 </element>
 <element name="R1" library="rcl" package="R0805" value="1K5" x="2.2225" y="13.335" rot="R90"/>
 <element name="R3" library="rcl" package="R0805" value="1K5" x="10.16" y="14.605" rot="R270"/>
-<element name="R4" library="pot" package="S63P" value="" x="15.875" y="15.24" rot="R90"/>
+<element name="R4" library="pot" package="S63P" value="100K" x="15.875" y="15.24" rot="R90"/>
 <element name="C1" library="rcl" package="C0805" value="100n" x="3.4925" y="9.8425" rot="R180"/>
 <element name="C2" library="rcl" package="C0805" value="" x="2.2225" y="17.78" rot="R90"/>
 <element name="C3" library="rcl" package="C0805" value="" x="7.9375" y="17.78" rot="R270"/>
 <element name="C4" library="rcl" package="C0805" value="" x="12.065" y="18.0975" rot="R180"/>
-<element name="R5" library="rcl" package="R0805" value="" x="6.985" y="2.8575" rot="R180"/>
+<element name="R5" library="rcl" package="R0805" value="1K" x="6.985" y="2.8575" rot="R180"/>
 <element name="D1" library="diode" package="ZDIO-2.5" value="3V3" x="23.495" y="19.05" rot="R180"/>
 <element name="JP1" library="con-lstb" package="MA03-2" value="" x="23.495" y="10.16" rot="R270">
 <attribute name="OC_NEWARK" value="unknown" x="-9.525" y="-8.89" size="1.778" layer="27" rot="R270" display="off"/>
@@ -1649,8 +1649,8 @@ design rules under a new name.</description>
 <attribute name="MF" value="" x="-9.525" y="-8.89" size="1.778" layer="27" rot="R270" display="off"/>
 <attribute name="OC_FARNELL" value="unknown" x="-9.525" y="-8.89" size="1.778" layer="27" rot="R270" display="off"/>
 </element>
-<element name="C5" library="rcl" package="E2-5" value="" x="2.54" y="3.175" rot="R90"/>
-<element name="C6" library="rcl" package="E2-5" value="" x="35.56" y="2.54" rot="R90"/>
+<element name="C5" library="rcl" package="E2-5" value="10uF" x="2.54" y="3.175" rot="R90"/>
+<element name="C6" library="rcl" package="E2-5" value="10uF" x="35.56" y="2.54" rot="R90"/>
 <element name="U$1" library="Ultrasound" package="TRANSDUCER" value="TRANSDUCER" x="33.02" y="10.16" rot="R270"/>
 <element name="U$2" library="Ultrasound" package="TRANSDUCER" value="TRANSDUCER" x="5.08" y="10.16" rot="R90"/>
 <element name="U1" library="Ultrasound" package="SOP50P310X90-8N" value="NC7NZ04K8X" x="30.1625" y="7.62" rot="R90">
@@ -1665,7 +1665,7 @@ design rules under a new name.</description>
 </element>
 <element name="R6" library="rcl" package="R0805" value="1K" x="7.62" y="5.3975"/>
 <element name="R7" library="rcl" package="R0805" value="470" x="7.62" y="9.8425"/>
-<element name="R2" library="rcl" package="R0805" value="1K5" x="4.7625" y="17.78" rot="R90"/>
+<element name="R2" library="rcl" package="R0805" value="5K6" x="4.7625" y="17.78" rot="R90"/>
 </elements>
 <signals>
 <signal name="N$1">

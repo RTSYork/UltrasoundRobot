@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!DOCTYPE eagle SYSTEM "eagle.dtd">
-<eagle version="6.4">
+<eagle version="6.3">
 <drawing>
 <settings>
 <setting alwaysvectorfont="no"/>
@@ -15572,20 +15572,20 @@ W = angled&lt;p&gt;
 </part>
 <part name="R1" library="rcl" deviceset="R-EU_" device="R0805" value="1K5"/>
 <part name="R3" library="rcl" deviceset="R-EU_" device="R0805" value="1K5"/>
-<part name="R4" library="pot" deviceset="TRIM_EU-" device="S63P"/>
+<part name="R4" library="pot" deviceset="TRIM_EU-" device="S63P" value="100K"/>
 <part name="C1" library="rcl" deviceset="C-EU" device="C0805" value="100n"/>
 <part name="C2" library="rcl" deviceset="C-EU" device="C0805"/>
 <part name="C3" library="rcl" deviceset="C-EU" device="C0805"/>
 <part name="C4" library="rcl" deviceset="C-EU" device="C0805"/>
-<part name="R5" library="rcl" deviceset="R-EU_" device="R0805"/>
+<part name="R5" library="rcl" deviceset="R-EU_" device="R0805" value="1K"/>
 <part name="GND1" library="supply1" deviceset="GND" device=""/>
 <part name="D1" library="diode" deviceset="ZENER-DIODE" device="ZD-2.5" value="3V3"/>
 <part name="GND2" library="supply1" deviceset="GND" device=""/>
 <part name="GND4" library="supply1" deviceset="GND" device=""/>
 <part name="JP1" library="con-lstb" deviceset="MA03-2" device=""/>
 <part name="GND5" library="supply1" deviceset="GND" device=""/>
-<part name="C5" library="rcl" deviceset="CPOL-EU" device="E2-5"/>
-<part name="C6" library="rcl" deviceset="CPOL-EU" device="E2-5"/>
+<part name="C5" library="rcl" deviceset="CPOL-EU" device="E2-5" value="10uF"/>
+<part name="C6" library="rcl" deviceset="CPOL-EU" device="E2-5" value="10uF"/>
 <part name="GND6" library="supply1" deviceset="GND" device=""/>
 <part name="U$1" library="Ultrasound" deviceset="TRANSDUCER" device=""/>
 <part name="U$2" library="Ultrasound" deviceset="TRANSDUCER" device=""/>
@@ -15598,7 +15598,7 @@ W = angled&lt;p&gt;
 <part name="GND8" library="supply1" deviceset="GND" device=""/>
 <part name="R6" library="rcl" deviceset="R-EU_" device="R0805" value="1K"/>
 <part name="R7" library="rcl" deviceset="R-EU_" device="R0805" value="470"/>
-<part name="R2" library="rcl" deviceset="R-EU_" device="R0805" value="1K5"/>
+<part name="R2" library="rcl" deviceset="R-EU_" device="R0805" value="5K6"/>
 </parts>
 <sheets>
 <sheet>
