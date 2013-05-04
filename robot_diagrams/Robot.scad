@@ -9,8 +9,10 @@ color_daughter = [166 / 255, 195 / 255, 214 / 255];
 c_rad = 47.5; // Chassis radius (mm)
 c_thk = 3; // Chassis thickness (mm)
 
-trans_count = 28; // Transducer count
+trans_count = 24; // Transducer count
 trans_angle = (360 / trans_count); // Transducer spacing angle (deg)
+trans_ghost_start = 0; // Transducer ghost start index
+trans_ghost_end = 20; // Transducer ghost end index
 
 ww_width = 34; // Wheel well width (mm)
 ww_depth = 10.5; // Wheel well depth (mm)
@@ -101,11 +103,15 @@ translate([0, 0, fpga_tot_height + c_thk + mb_sup_height + mb_thk + fpga_mb_offs
 
 // Daughter boards
 for(i = [0 : trans_count - 1]) {
-	rotate(a = [0, 0, i * trans_angle])
+	rotate(a = [0, 0, -i * trans_angle])
 		translate([0, -c_rad, (db_con_length / 2) + c_thk + mb_sup_height + mb_thk])
 			rotate(a = [90, 0, 0])
-				color(color_daughter)
-					daughter();
+				if(i > trans_ghost_start && i < trans_ghost_end) {
+					color(color_daughter)
+						daughter();
+				} else {
+					%daughter();
+				}
 }
 
 //-------------------------------------------------------------------------------
