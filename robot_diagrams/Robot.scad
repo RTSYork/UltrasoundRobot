@@ -9,7 +9,8 @@ color_daughter = [166 / 255, 195 / 255, 214 / 255];
 c_rad = 47.5; // Chassis radius (mm)
 c_thk = 3; // Chassis thickness (mm)
 
-trans_count = 10; // Transducer count
+trans_count = 28; // Transducer count
+trans_angle = (360 / trans_count); // Transducer spacing angle (deg)
 
 ww_width = 34; // Wheel well width (mm)
 ww_depth = 10.5; // Wheel well depth (mm)
@@ -58,7 +59,7 @@ fpga_conn_off_y = (fpga_con_length / 2) + (fpga_len_rec / 2) - (fpga_con_length 
 fpga_mb_offset = 6; // FPGA Mainboard offset (mm)
 
 db_thk = 1; // Daughter board thickness (mm)
-db_width = 25; // Daughter board width (mm)
+db_width = 12; // Daughter board width (mm)
 db_length = 40; // Daughter board length (mm)
 db_con_width = 7; // Daughter board connector width (mm)
 db_con_length = 4; // Daughter board connector width (mm)
@@ -100,7 +101,7 @@ translate([0, 0, fpga_tot_height + c_thk + mb_sup_height + mb_thk + fpga_mb_offs
 
 // Daughter boards
 for(i = [0 : trans_count - 1]) {
-	rotate(a = [0, 0, i * (360 / trans_count)])
+	rotate(a = [0, 0, i * trans_angle])
 		translate([0, -c_rad, (db_con_length / 2) + c_thk + mb_sup_height + mb_thk])
 			rotate(a = [90, 0, 0])
 				color(color_daughter)
@@ -145,8 +146,8 @@ module mainboard() {
 
 	// Connectors
 	for(i = [0 : trans_count - 1]) {
-		rotate(v = [0, 0, 1], a = i * (360 / trans_count))
-			translate([0, mb_rad - (mb_con_length / 2), (mb_con_thk / 2) + mb_thk])
+		rotate(v = [0, 0, 1], a = i * trans_angle)
+			translate([0, -mb_rad + (mb_con_length / 2), (mb_con_thk / 2) + mb_thk])
 				cube([mb_con_width, mb_con_length, mb_con_thk], center = true);
 	}
 }
