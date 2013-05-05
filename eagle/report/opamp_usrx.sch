@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!DOCTYPE eagle SYSTEM "eagle.dtd">
-<eagle version="6.3">
+<eagle version="6.4">
 <drawing>
 <settings>
 <setting alwaysvectorfont="no"/>
@@ -8145,10 +8145,10 @@ Source: http://www.bourns.com/data/global/PDFs/3223.PDF</description>
 <instance part="IC1" gate="B" x="200.66" y="200.66" rot="MR180"/>
 <instance part="R1" gate="G$1" x="144.78" y="205.74"/>
 <instance part="R3" gate="G$1" x="185.42" y="203.2"/>
-<instance part="R2" gate="1" x="160.02" y="215.9" rot="R270"/>
+<instance part="R2" gate="1" x="160.02" y="213.36" rot="R270"/>
 <instance part="R4" gate="1" x="200.66" y="213.36" rot="R270"/>
 <instance part="C1" gate="G$1" x="132.08" y="205.74" rot="R90"/>
-<instance part="C2" gate="G$1" x="160.02" y="226.06" rot="R90"/>
+<instance part="C2" gate="G$1" x="160.02" y="223.52" rot="R90"/>
 <instance part="C3" gate="G$1" x="172.72" y="203.2" rot="R90"/>
 <instance part="C4" gate="G$1" x="200.66" y="223.52" rot="R90"/>
 <instance part="IC1" gate="P" x="241.3" y="210.82"/>
@@ -8168,13 +8168,13 @@ Source: http://www.bourns.com/data/global/PDFs/3223.PDF</description>
 <pinref part="R1" gate="G$1" pin="2"/>
 <wire x1="149.86" y1="205.74" x2="152.4" y2="205.74" width="0.1524" layer="91"/>
 <pinref part="R2" gate="1" pin="A"/>
-<wire x1="154.94" y1="215.9" x2="152.4" y2="215.9" width="0.1524" layer="91"/>
-<wire x1="152.4" y1="215.9" x2="152.4" y2="205.74" width="0.1524" layer="91"/>
+<wire x1="154.94" y1="213.36" x2="152.4" y2="213.36" width="0.1524" layer="91"/>
+<wire x1="152.4" y1="213.36" x2="152.4" y2="205.74" width="0.1524" layer="91"/>
 <junction x="152.4" y="205.74"/>
 <pinref part="C2" gate="G$1" pin="1"/>
-<wire x1="157.48" y1="226.06" x2="152.4" y2="226.06" width="0.1524" layer="91"/>
-<wire x1="152.4" y1="226.06" x2="152.4" y2="215.9" width="0.1524" layer="91"/>
-<junction x="152.4" y="215.9"/>
+<wire x1="157.48" y1="223.52" x2="152.4" y2="223.52" width="0.1524" layer="91"/>
+<wire x1="152.4" y1="223.52" x2="152.4" y2="213.36" width="0.1524" layer="91"/>
+<junction x="152.4" y="213.36"/>
 </segment>
 </net>
 <net name="N$2" class="0">
@@ -8190,13 +8190,13 @@ Source: http://www.bourns.com/data/global/PDFs/3223.PDF</description>
 <pinref part="C3" gate="G$1" pin="1"/>
 <wire x1="170.18" y1="203.2" x2="167.64" y2="203.2" width="0.1524" layer="91"/>
 <pinref part="C2" gate="G$1" pin="2"/>
-<wire x1="165.1" y1="226.06" x2="167.64" y2="226.06" width="0.1524" layer="91"/>
-<wire x1="167.64" y1="226.06" x2="167.64" y2="210.82" width="0.1524" layer="91"/>
+<wire x1="165.1" y1="223.52" x2="167.64" y2="223.52" width="0.1524" layer="91"/>
+<wire x1="167.64" y1="223.52" x2="167.64" y2="208.28" width="0.1524" layer="91"/>
 <pinref part="R2" gate="1" pin="S"/>
-<wire x1="160.02" y1="210.82" x2="167.64" y2="210.82" width="0.1524" layer="91"/>
-<wire x1="167.64" y1="203.2" x2="167.64" y2="210.82" width="0.1524" layer="91"/>
+<wire x1="160.02" y1="208.28" x2="167.64" y2="208.28" width="0.1524" layer="91"/>
+<wire x1="167.64" y1="203.2" x2="167.64" y2="208.28" width="0.1524" layer="91"/>
 <junction x="167.64" y="203.2"/>
-<junction x="167.64" y="210.82"/>
+<junction x="167.64" y="208.28"/>
 </segment>
 </net>
 <net name="N$5" class="0">
