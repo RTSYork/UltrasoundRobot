@@ -45,8 +45,11 @@ final static float SCALE_PRES_VERT = 0.1; //V
 final static float SCALE_PRES_HORIZ = 100; //uS
 final static int MARKER_WIDTH = 5;
 
+final static float TRIGGER_NEAR_FAR_CHANGE = 1200; // Time at which far trigger is used instead of near trigger
+final static float TRIGGER_NEAR_FAR_CHANGE_CHANGE = 50; // Amount to inc / dec trigger switch time by
 final static float TRIGGER_BASE = 1.6; //Default trigger voltage for distance detection
-final static float TRIGGER_DEFAULT_OFFSET = 0.05; //Default amount trigger is away from base value
+final static float TRIGGER_DEFAULT_OFFSET_NEAR = 0.05; //Default amount near trigger is away from base value
+final static float TRIGGER_DEFAULT_OFFSET_FAR = 0.05; //Default amount far trigger is away from base value
 final static float TRIGGER_CHANGE = 0.025; //Amount to inc / dec trigger voltage by per key stroke
 final static float SPEED_OF_SOUND = 0.034399; //cm / uS
 
@@ -93,9 +96,17 @@ int pageNo = 0;
 //Reference distance (cm) to draw line
 float refDist = 0;
 
+//Trigger to edit
+boolean editFar = false;
+
+//Trigger change time
+float triggerNearFarChangeTime = TRIGGER_NEAR_FAR_CHANGE;
+
 //Trigger levels
-float triggerMin = TRIGGER_BASE - TRIGGER_DEFAULT_OFFSET;
-float triggerMax = TRIGGER_BASE + TRIGGER_DEFAULT_OFFSET;
+float triggerMinNear = TRIGGER_BASE - TRIGGER_DEFAULT_OFFSET_NEAR;
+float triggerMaxNear = TRIGGER_BASE + TRIGGER_DEFAULT_OFFSET_NEAR;
+float triggerMinFar = TRIGGER_BASE - TRIGGER_DEFAULT_OFFSET_FAR;
+float triggerMaxFar = TRIGGER_BASE + TRIGGER_DEFAULT_OFFSET_FAR;
 
 //Stats - first to exceed triggers
 int peakIndexFirstMin = -1;
@@ -478,9 +489,12 @@ void processSample(String sInput, boolean log) {
 
       //Map value to voltage
       float fVoltage = map(fInput, VAL_MIN, VAL_MAX, VOLT_MIN, VOLT_MAX);
+      
+      //Map sample index to sample time
+      float fSampleTime = (dataIndex * SAMPLE_PERIOD);
 
       //Check lower trigger
-      if (fVoltage < triggerMin) {
+      if ((fSampleTime < triggerNearFarChangeTime && fVoltage < triggerMinNear) || (fSampleTime >= triggerNearFarChangeTime && fVoltage < triggerMinFar)) {
         //Set first min index the first time trigger exceeded
         if(peakIndexFirstMin == -1) peakIndexFirstMin = dataIndex;
         
@@ -492,7 +506,7 @@ void processSample(String sInput, boolean log) {
       }
 
       //Check upper trigger
-      if (fVoltage > triggerMax) {
+      if ((fSampleTime < triggerNearFarChangeTime && fVoltage > triggerMaxNear) || (fSampleTime >= triggerNearFarChangeTime && fVoltage > triggerMaxFar)) {
         //Set first max index the first time trigger exceeded
         if(peakIndexFirstMax == -1) peakIndexFirstMax = dataIndex;
         
@@ -581,25 +595,64 @@ void keyPressed() {
       //Reset page number
       pageNo = 0; 
       break;
+    case 'p':
+      //Switch trigger to edit
+      editFar = !editFar;
+      break;
     case 'i':
       //Decrement trigger
-      triggerMin -= TRIGGER_CHANGE;
+      if(editFar) {
+        triggerMinFar -= TRIGGER_CHANGE;
+      } else {
+        triggerMinNear -= TRIGGER_CHANGE;
+      }
 
       break;
     case 'y':
       //Increment trigger
-      triggerMin += TRIGGER_CHANGE;
+      if(editFar) {
+        triggerMinFar += TRIGGER_CHANGE;
+      } else {
+        triggerMinNear += TRIGGER_CHANGE;
+      }
 
       break;
     case 'o':
       //Decrement trigger
-      triggerMax -= TRIGGER_CHANGE;
+      if(editFar) {
+        triggerMaxFar -= TRIGGER_CHANGE;
+      } else {
+        triggerMaxNear -= TRIGGER_CHANGE;
+      }
 
       break;
     case 'u':
       //Increment trigger
-      triggerMax += TRIGGER_CHANGE;
+      if(editFar) {
+        triggerMaxFar += TRIGGER_CHANGE;
+      } else {
+        triggerMaxNear += TRIGGER_CHANGE;
+      }
 
+      break;
+    case 'q':
+      //Decrement trigger switch change time
+      triggerNearFarChangeTime -= TRIGGER_NEAR_FAR_CHANGE_CHANGE;
+      
+      break;
+    case 'e':
+      //Increment trigger switch change time
+      triggerNearFarChangeTime += TRIGGER_NEAR_FAR_CHANGE_CHANGE;
+     
+      break;
+    case 'w':
+      //Display trigger values
+      String s = "";
+      s += "Near Far Change: " + triggerNearFarChangeTime + "\n";
+      s += "Min Near: " + triggerMinNear + " - Max Near: " + triggerMaxNear + "\n";
+      s += "Min Far: " + triggerMinFar + " - Max Far: " + triggerMaxFar;
+      displayMessage(s);
+      
       break;
     case 'r':
       //Read reference distance
@@ -682,8 +735,8 @@ void draw() {
   
   //Output message if available
   if(millis() < iDisplayMessageEndTime) {
-    textAlign(CENTER, CENTER);
-    text(sDisplayMessage, width / 2, 10);
+    textAlign(CENTER, TOP);
+    text(sDisplayMessage, width / 2, 0);
   }
 
   //Generate text
@@ -724,6 +777,8 @@ void draw() {
 
   text("Min Avg: " + nf(avgPeakFirstMinTime, 1, 2) + "uS / " + nf(avgPeakFirstMinTime * SPEED_OF_SOUND, 1, 2) + "cm", width, tmpY); tmpY += 15;
   text("Max Avg: " + nf(avgPeakFirstMaxTime, 1, 2) + "uS / " + nf(avgPeakFirstMaxTime * SPEED_OF_SOUND, 1, 2) + "cm", width, tmpY); tmpY += 20;
+  
+  text("Avg: " + nf((avgPeakFirstMinTime + avgPeakFirstMaxTime) / 2, 1, 2) + "uS / " + nf(avgPeakFirstMaxTime * SPEED_OF_SOUND, 1, 2) + "cm", width, tmpY); tmpY += 20;
 
   /*  
   text("Min Val: " + nf(peakTimeMin, 1, 2) + "uS / " + nf(peakTimeMin * SPEED_OF_SOUND, 1, 2) + "cm", width, tmpY); tmpY += 15;
@@ -734,12 +789,17 @@ void draw() {
   */
 
   //Output trigger levels
-  float tMin = map(triggerMin, VOLT_MIN, VOLT_MAX, 0, height);
-  float tMax = map(triggerMax, VOLT_MIN, VOLT_MAX, 0, height);
+  float tMinNear = map(triggerMinNear, VOLT_MIN, VOLT_MAX, 0, height);
+  float tMaxNear = map(triggerMaxNear, VOLT_MIN, VOLT_MAX, 0, height);
+  float tMinFar = map(triggerMinFar, VOLT_MIN, VOLT_MAX, 0, height);
+  float tMaxFar = map(triggerMaxFar, VOLT_MIN, VOLT_MAX, 0, height);
+  float tChangeTimeNearFar = map(triggerNearFarChangeTime, 0, (SAMPLE_PERIOD * pageSize), 0, width);
   stroke(0, 0, 255);
-  line(0, height - tMin, width, height - tMin);
+  line(0, height - tMinNear, tChangeTimeNearFar, height - tMinNear);
+  line(tChangeTimeNearFar, height - tMinFar, width, height - tMinFar);
   stroke(255, 0, 0);
-  line(0, height - tMax, width, height - tMax);
+  line(0, height - tMaxNear, tChangeTimeNearFar, height - tMaxNear);
+  line(tChangeTimeNearFar, height - tMaxFar, width, height - tMaxFar);
   
   //Select black
   stroke(0);
