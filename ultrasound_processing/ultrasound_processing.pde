@@ -46,7 +46,7 @@ final static float SCALE_PRES_HORIZ = 100; //uS
 final static int MARKER_WIDTH = 5;
 
 final static float TRIGGER_NEAR_FAR_CHANGE = 1200; // Time at which far trigger is used instead of near trigger
-final static float TRIGGER_NEAR_FAR_CHANGE_CHANGE = 50; // Amount to inc / dec trigger switch time by
+final static float TRIGGER_NEAR_FAR_CHANGE_CHANGE = 10; // Amount to inc / dec trigger switch time by
 final static float TRIGGER_BASE = 1.6; //Default trigger voltage for distance detection
 final static float TRIGGER_DEFAULT_OFFSET_NEAR = 0.05; //Default amount near trigger is away from base value
 final static float TRIGGER_DEFAULT_OFFSET_FAR = 0.05; //Default amount far trigger is away from base value
@@ -89,6 +89,9 @@ boolean continuous = true;
 int dataIndex = 0;
 float[] data = new float[DATA_SIZE];
 
+//Cycle counter
+int cycleCount = 0;
+
 //Display variables
 int pageSize = DEFAULT_PAGE_SIZE;
 int pageNo = 0;
@@ -100,7 +103,7 @@ float refDist = 0;
 boolean editFar = false;
 
 //Trigger change time
-float triggerNearFarChangeTime = TRIGGER_NEAR_FAR_CHANGE;
+float triggerNearFarChangeTime = 760; //TRIGGER_NEAR_FAR_CHANGE;
 
 //Trigger levels
 float triggerMinNear = TRIGGER_BASE - TRIGGER_DEFAULT_OFFSET_NEAR;
@@ -127,6 +130,8 @@ float avgPeakTimeMin = 0;
 int avgPeakTimeMinCount = 0;
 float avgPeakTimeMax = 0;
 int avgPeakTimeMaxCount = 0;
+float minPeakTimeFirstMin = MAX_FLOAT;
+float minPeakTimeFirstMax = MAX_FLOAT;
 float avgPeakTimeFirstMin = 0;
 int avgPeakTimeFirstMinCount = 0;
 float avgPeakTimeFirstMax = 0;
@@ -433,6 +438,9 @@ void processSample(String sInput, boolean log) {
             //Update time
             peakTimeFirstMin = (peakIndexFirstMin * SAMPLE_PERIOD) / 2;
             
+            //Update min time
+            minPeakTimeFirstMin = min(minPeakTimeFirstMin, peakTimeFirstMin);
+
             //Update average
             avgPeakTimeFirstMin += peakTimeFirstMin;
             avgPeakTimeFirstMinCount++;
@@ -447,6 +455,9 @@ void processSample(String sInput, boolean log) {
             //Update time
             peakTimeFirstMax = (peakIndexFirstMax * SAMPLE_PERIOD) / 2;
             
+            //Update min time
+            minPeakTimeFirstMax = min(minPeakTimeFirstMax, peakTimeFirstMax);
+
             //Update average
             avgPeakTimeFirstMax += peakTimeFirstMax;
             avgPeakTimeFirstMaxCount++;
@@ -461,6 +472,9 @@ void processSample(String sInput, boolean log) {
             for(int i = 0; i < data.length; i++) writeFile(String.valueOf(data[i]));
             writeFile("END");
           }
+          
+          //Update cycle count
+          cycleCount++;
 
           //Change state                   
           state = (continuous ? WAITING : COMPLETE);
@@ -545,6 +559,9 @@ void resetAverages() {
   avgPeakTimeFirstMinCount = 0;
   avgPeakTimeFirstMax = 0;
   avgPeakTimeFirstMaxCount = 0;
+  minPeakTimeFirstMin = MAX_FLOAT;
+  minPeakTimeFirstMax = MAX_FLOAT;
+  cycleCount = 0;
 }
 
 void keyPressed() { 
@@ -772,6 +789,8 @@ void draw() {
   float avgPeakFirstMaxTime = calcAvgPeakTimeFirstMax();
 
   //Output times and distances
+  text("Count: " + cycleCount, width, tmpY); tmpY += 20;
+  
   text("Min: " + nf(peakTimeFirstMin, 1, 2) + "uS / " + nf(peakTimeFirstMin * SPEED_OF_SOUND, 1, 2) + "cm", width, tmpY); tmpY += 15;
   text("Max: " + nf(peakTimeFirstMax, 1, 2) + "uS / " + nf(peakTimeFirstMax * SPEED_OF_SOUND, 1, 2) + "cm", width, tmpY); tmpY += 20;
 
@@ -780,6 +799,9 @@ void draw() {
   
   text("Avg: " + nf((avgPeakFirstMinTime + avgPeakFirstMaxTime) / 2, 1, 2) + "uS / " + nf(avgPeakFirstMaxTime * SPEED_OF_SOUND, 1, 2) + "cm", width, tmpY); tmpY += 20;
 
+  text("Min Min: " + nf(minPeakTimeFirstMin, 1, 2) + "uS / " + nf(minPeakTimeFirstMin * SPEED_OF_SOUND, 1, 2) + "cm", width, tmpY); tmpY += 15;
+  text("Max Min: " + nf(minPeakTimeFirstMax, 1, 2) + "uS / " + nf(minPeakTimeFirstMax * SPEED_OF_SOUND, 1, 2) + "cm", width, tmpY); tmpY += 20;
+  
   /*  
   text("Min Val: " + nf(peakTimeMin, 1, 2) + "uS / " + nf(peakTimeMin * SPEED_OF_SOUND, 1, 2) + "cm", width, tmpY); tmpY += 15;
   text("Max Val: " + nf(peakTimeMax, 1, 2) + "uS / " + nf(peakTimeMax * SPEED_OF_SOUND, 1, 2) + "cm", width, tmpY); tmpY += 20;
