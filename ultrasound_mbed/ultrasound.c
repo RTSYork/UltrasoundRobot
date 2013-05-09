@@ -20,7 +20,7 @@ void main(void) {
 	serial_init();
 	adc_init();
 	pwm_init();
-	systick_init();
+	//systick_init();
 	timer_init();
 
 	//Welcome
@@ -45,9 +45,6 @@ void main(void) {
 		//Flash Debug LED
 		led_write(3, !led_read(3));
         
-		//Start receiver timer
-		timer_start(1);
-
 		//Reset sample index and clear complete flag
 		sampleIndex = 0;
 		sampleComplete = 0;
@@ -56,13 +53,16 @@ void main(void) {
 		txCounter = TRANSMIT_TIME_US / 10;
 
 		//Set TX debug pin
-		GPIO_SetValue(DEBUG_TX_PORT, (1 << DEBUG_TX_LINE));
+		//GPIO_SetValue(DEBUG_TX_PORT, (1 << DEBUG_TX_LINE));
 
 		//Set TX enable pin
 		GPIO_SetValue(TX_ENABLE_PORT, (1 << TX_ENABLE_LINE));
 
 		//Start ultrasound transmitter
 		pwm_enable();
+
+		//Start receiver timer
+		timer_start(1);
 
 		//Start transmitter timer
 		timer_start(0);
@@ -77,7 +77,7 @@ void main(void) {
 	        serial_printf("END\n");
 
 		//Wait a while
-		systick_sleep(100);
+		//systick_sleep(100);
 	}
 }
 
@@ -97,7 +97,7 @@ void TIMER0_IRQHandler(void) {
 		GPIO_ClearValue(TX_ENABLE_PORT, (1 << TX_ENABLE_LINE));
 
 		//Clear TX debug pin
-		GPIO_ClearValue(DEBUG_TX_PORT, (1 << DEBUG_TX_LINE));
+		//GPIO_ClearValue(DEBUG_TX_PORT, (1 << DEBUG_TX_LINE));
 
 		//Stop timer
 		timer_stop(0);
@@ -106,7 +106,7 @@ void TIMER0_IRQHandler(void) {
 
 void TIMER1_IRQHandler(void) {
 	//Set RX debug pin
-	GPIO_SetValue(DEBUG_RX_PORT, (1 << DEBUG_RX_LINE));
+	//GPIO_SetValue(DEBUG_RX_PORT, (1 << DEBUG_RX_LINE));
 
 	//Sample ADC
 	samples[sampleIndex] = adc_read();
@@ -127,5 +127,5 @@ void TIMER1_IRQHandler(void) {
 	TIM_ClearIntPending(LPC_TIM1, TIM_MR0_INT);
 
 	//Clear RX debug pin
-	GPIO_ClearValue(DEBUG_RX_PORT, (1 << DEBUG_RX_LINE));
+	//GPIO_ClearValue(DEBUG_RX_PORT, (1 << DEBUG_RX_LINE));
 }
