@@ -5,6 +5,9 @@ import javax.swing.*;
 
 //###############################################################################
 
+//Room temp
+final static float TEMPERATURE = 22;
+
 //Config
 final static int SERIAL_PORT = 0; //Serial port to listen on (-1 for disabled)
 
@@ -52,7 +55,7 @@ final static float TRIGGER_BASE = 1.6; //Default trigger voltage for distance de
 final static float TRIGGER_DEFAULT_OFFSET_NEAR = 0.05; //Default amount near trigger is away from base value
 final static float TRIGGER_DEFAULT_OFFSET_FAR = 0.05; //Default amount far trigger is away from base value
 final static float TRIGGER_CHANGE = 0.0125; //Amount to inc / dec trigger voltage by per key stroke
-final static float SPEED_OF_SOUND = 0.034399; //cm / uS
+final static float SPEED_OF_SOUND = ((331.3 + 0.606 * TEMPERATURE) * 100) / 1000000; //cm / uS
 
 final static float SAMPLE_PERIOD = (1.0 / SAMPLE_RATE) * 1000000;
 final static int DATA_SIZE = int(SAMPLE_TIME / SAMPLE_PERIOD);
@@ -104,13 +107,13 @@ float refDist = 0;
 boolean editFar = false;
 
 //Trigger change time
-float triggerNearFarChangeTime = 760; //TRIGGER_NEAR_FAR_CHANGE;
+float triggerNearFarChangeTime = 820; //TRIGGER_NEAR_FAR_CHANGE;
 
 //Trigger levels
-float triggerMinNear = TRIGGER_BASE - TRIGGER_DEFAULT_OFFSET_NEAR;
-float triggerMaxNear = TRIGGER_BASE + TRIGGER_DEFAULT_OFFSET_NEAR;
-float triggerMinFar = TRIGGER_BASE - TRIGGER_DEFAULT_OFFSET_FAR;
-float triggerMaxFar = TRIGGER_BASE + TRIGGER_DEFAULT_OFFSET_FAR;
+float triggerMinNear = 1.4; //TRIGGER_BASE - TRIGGER_DEFAULT_OFFSET_NEAR;
+float triggerMaxNear = 1.6375; //TRIGGER_BASE + TRIGGER_DEFAULT_OFFSET_NEAR;
+float triggerMinFar = 1.4625; //TRIGGER_BASE - TRIGGER_DEFAULT_OFFSET_FAR;
+float triggerMaxFar = 1.575; //TRIGGER_BASE + TRIGGER_DEFAULT_OFFSET_FAR;
 
 //Stats - first to exceed triggers
 int peakIndexMin = -1;
