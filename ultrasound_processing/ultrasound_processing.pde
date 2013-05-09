@@ -40,17 +40,18 @@ final static int DEFAULT_PAGE_SIZE = 250; //Samples per screen
 final static int PAGE_CHANGE = 10; //Amount to inc / dec page size by per key stroke
 
 final static boolean ENABLE_TRIGGER_BASE_LINE = false; //Enable line at trigger base (op-amp ref voltage)
+final static boolean ENABLE_MIN_VALUES = true; //Enable overall min values
 
 final static float SCALE_PRES_VERT = 0.1; //V
 final static float SCALE_PRES_HORIZ = 100; //uS
 final static int MARKER_WIDTH = 5;
 
 final static float TRIGGER_NEAR_FAR_CHANGE = 1200; // Time at which far trigger is used instead of near trigger
-final static float TRIGGER_NEAR_FAR_CHANGE_CHANGE = 10; // Amount to inc / dec trigger switch time by
+final static float TRIGGER_NEAR_FAR_CHANGE_CHANGE = 5; // Amount to inc / dec trigger switch time by
 final static float TRIGGER_BASE = 1.6; //Default trigger voltage for distance detection
 final static float TRIGGER_DEFAULT_OFFSET_NEAR = 0.05; //Default amount near trigger is away from base value
 final static float TRIGGER_DEFAULT_OFFSET_FAR = 0.05; //Default amount far trigger is away from base value
-final static float TRIGGER_CHANGE = 0.025; //Amount to inc / dec trigger voltage by per key stroke
+final static float TRIGGER_CHANGE = 0.0125; //Amount to inc / dec trigger voltage by per key stroke
 final static float SPEED_OF_SOUND = 0.034399; //cm / uS
 
 final static float SAMPLE_PERIOD = (1.0 / SAMPLE_RATE) * 1000000;
@@ -112,30 +113,18 @@ float triggerMinFar = TRIGGER_BASE - TRIGGER_DEFAULT_OFFSET_FAR;
 float triggerMaxFar = TRIGGER_BASE + TRIGGER_DEFAULT_OFFSET_FAR;
 
 //Stats - first to exceed triggers
-int peakIndexFirstMin = -1;
-int peakIndexFirstMax = -1;
-float peakTimeFirstMin = 0;
-float peakTimeFirstMax = 0;
-
-//Stats - minimum and maxinimum values exceeding triggers
 int peakIndexMin = -1;
 int peakIndexMax = -1;
-float peakValMin = Float.MAX_VALUE;
-float peakValMax = Float.MIN_VALUE;
-float peakTimeMin = 0;
-float peakTimeMax = 0;
+
+//Stats - minimum values to exceed triggers
+int minPeakIndexMin = 0;
+int minPeakIndexMax = 0;
 
 //Averages
 float avgPeakTimeMin = 0;
 int avgPeakTimeMinCount = 0;
 float avgPeakTimeMax = 0;
 int avgPeakTimeMaxCount = 0;
-float minPeakTimeFirstMin = MAX_FLOAT;
-float minPeakTimeFirstMax = MAX_FLOAT;
-float avgPeakTimeFirstMin = 0;
-int avgPeakTimeFirstMinCount = 0;
-float avgPeakTimeFirstMax = 0;
-int avgPeakTimeFirstMaxCount = 0;
 
 void setup() { 
   //Set window size
@@ -391,12 +380,8 @@ void processSample(String sInput, boolean log) {
         dataIndex = 0;
 
         //Reset peak index and peak
-        peakIndexFirstMin = -1;
-        peakIndexFirstMax = -1;
         peakIndexMin = -1;
         peakIndexMax = -1;
-        peakValMin = Float.MAX_VALUE;
-        peakValMax = Float.MIN_VALUE;
 
         //Change state
         state = SAMPLING;
@@ -406,64 +391,35 @@ void processSample(String sInput, boolean log) {
       //Check state
       if (state == SAMPLING) {
         //Check index
-        if (dataIndex == data.length) {
-          //Update min peak time
+        if (dataIndex == data.length) {         
+          //Update first min time
           if (peakIndexMin != -1) {
             //Update time
-            peakTimeMin = (peakIndexMin * SAMPLE_PERIOD) / 2;
+            float peakTimeMin = sampleToTime(peakIndexMin) / 2;
             
+            //Update min time
+            if(minPeakIndexMin == 0 || peakTimeMin< sampleToTime(minPeakIndexMin)) {
+              minPeakIndexMin = peakIndexMin;
+            }
+
             //Update average
             avgPeakTimeMin += peakTimeMin;
             avgPeakTimeMinCount++;
-          } 
-          else {
-            peakTimeMin = 0;
-          }
-
-          //Update max peak time
-          if (peakIndexMax != -1) {
-            //Update time
-            peakTimeMax = (peakIndexMax * SAMPLE_PERIOD) / 2;
-            
-            //Update average
-            avgPeakTimeMax += peakTimeMax;
-            avgPeakTimeMaxCount++;
-          } 
-          else {
-            peakTimeMax = 0;
-          }
-          
-          //Update first min time
-          if (peakIndexFirstMin != -1) {
-            //Update time
-            peakTimeFirstMin = (peakIndexFirstMin * SAMPLE_PERIOD) / 2;
-            
-            //Update min time
-            minPeakTimeFirstMin = min(minPeakTimeFirstMin, peakTimeFirstMin);
-
-            //Update average
-            avgPeakTimeFirstMin += peakTimeFirstMin;
-            avgPeakTimeFirstMinCount++;
-
-          } 
-          else {
-            peakTimeFirstMin = 0;
           }
 
           //Update first max time
-          if (peakIndexFirstMax != -1) {
+          if (peakIndexMax != -1) {
             //Update time
-            peakTimeFirstMax = (peakIndexFirstMax * SAMPLE_PERIOD) / 2;
+            float peakTimeMax = sampleToTime(peakIndexMax) / 2;
             
-            //Update min time
-            minPeakTimeFirstMax = min(minPeakTimeFirstMax, peakTimeFirstMax);
+            //Update max time
+            if(minPeakIndexMax == 0 || peakTimeMax < sampleToTime(minPeakIndexMax)) {
+              minPeakIndexMax = peakIndexMax;
+            }
 
             //Update average
-            avgPeakTimeFirstMax += peakTimeFirstMax;
-            avgPeakTimeFirstMaxCount++;
-          } 
-          else {
-            peakTimeFirstMax = 0;
+            avgPeakTimeMax += peakTimeMax;
+            avgPeakTimeMaxCount++;
           }
           
           //Log sample
@@ -505,33 +461,25 @@ void processSample(String sInput, boolean log) {
       float fVoltage = map(fInput, VAL_MIN, VAL_MAX, VOLT_MIN, VOLT_MAX);
       
       //Map sample index to sample time
-      float fSampleTime = (dataIndex * SAMPLE_PERIOD);
+      float fSampleTime = sampleToTime(dataIndex);
 
       //Check lower trigger
       if ((fSampleTime < triggerNearFarChangeTime && fVoltage < triggerMinNear) || (fSampleTime >= triggerNearFarChangeTime && fVoltage < triggerMinFar)) {
         //Set first min index the first time trigger exceeded
-        if(peakIndexFirstMin == -1) peakIndexFirstMin = dataIndex;
-        
-        //Update min index if minimum voltage exceeded
-        if(fVoltage < peakValMin) {
-          peakIndexMin = dataIndex;
-          peakValMin = fVoltage;
-        }
+        if(peakIndexMin == -1) peakIndexMin = dataIndex;
       }
 
       //Check upper trigger
       if ((fSampleTime < triggerNearFarChangeTime && fVoltage > triggerMaxNear) || (fSampleTime >= triggerNearFarChangeTime && fVoltage > triggerMaxFar)) {
         //Set first max index the first time trigger exceeded
-        if(peakIndexFirstMax == -1) peakIndexFirstMax = dataIndex;
-        
-        //Update max index if maximum voltage exceeded
-        if(fVoltage > peakValMax) {
-          peakIndexMax = dataIndex;
-          peakValMax = fVoltage;
-        }
+        if(peakIndexMax == -1) peakIndexMax = dataIndex;
       }
     }
   }
+}
+
+float sampleToTime(int sampleIndex) {
+  return (sampleIndex * SAMPLE_PERIOD);
 }
 
 void getRefDistance() {
@@ -551,17 +499,13 @@ void getRefDistance() {
 }
 
 void resetAverages() {
+  cycleCount = 0;
+  minPeakIndexMin = 0;
+  minPeakIndexMax = 0;
   avgPeakTimeMin = 0;
   avgPeakTimeMinCount = 0;
   avgPeakTimeMax = 0;
   avgPeakTimeMaxCount = 0;
-  avgPeakTimeFirstMin = 0;
-  avgPeakTimeFirstMinCount = 0;
-  avgPeakTimeFirstMax = 0;
-  avgPeakTimeFirstMaxCount = 0;
-  minPeakTimeFirstMin = MAX_FLOAT;
-  minPeakTimeFirstMax = MAX_FLOAT;
-  cycleCount = 0;
 }
 
 void keyPressed() { 
@@ -723,23 +667,13 @@ float calcAvgPeakTimeMax() {
   return (avgPeakTimeMaxCount > 0 ? avgPeakTimeMax / avgPeakTimeMaxCount : 0);
 }
 
-float calcAvgPeakTimeFirstMin() {
-  return (avgPeakTimeFirstMinCount > 0 ? avgPeakTimeFirstMin / avgPeakTimeFirstMinCount : 0);
-}
-
-float calcAvgPeakTimeFirstMax() {
-  return (avgPeakTimeFirstMaxCount > 0 ? avgPeakTimeFirstMax / avgPeakTimeFirstMaxCount : 0);
-}
-
 void printAverages(String prefix) {
   //Calculate average times
   float avgPeakMinTime = calcAvgPeakTimeMin();
   float avgPeakMaxTime = calcAvgPeakTimeMax();
-  float avgPeakFirstMinTime = calcAvgPeakTimeFirstMin();
-  float avgPeakFirstMaxTime = calcAvgPeakTimeFirstMax();
   
   //Output csv string
-  println(prefix + (prefix != "" ? "," : "") + avgPeakMinTime + "," + avgPeakMaxTime + "," + avgPeakFirstMinTime + "," + avgPeakFirstMaxTime);
+  println(prefix + (prefix != "" ? "," : "") + avgPeakMinTime + "," + avgPeakMaxTime);
 }
 
 void draw() {  
@@ -782,33 +716,31 @@ void draw() {
   text(strState, width, tmpY);
   tmpY += 20;
 
+  //Calculate last min and max times
+  float peakTimeMin = (peakIndexMin != -1 ? sampleToTime(peakIndexMin) / 2 : 0);
+  float peakTimeMax = (peakIndexMin != -1 ? sampleToTime(peakIndexMax) / 2 : 0);
+  
+  //Calculate overall min and max times
+  float minPeakTimeMin = (minPeakIndexMin != -1 ? sampleToTime(minPeakIndexMin) / 2 : 0);
+  float minPeakTimeMax = (minPeakIndexMax != -1 ? sampleToTime(minPeakIndexMax) / 2 : 0);
+
   //Calculate average times
   float avgPeakMinTime = calcAvgPeakTimeMin();
   float avgPeakMaxTime = calcAvgPeakTimeMax();
-  float avgPeakFirstMinTime = calcAvgPeakTimeFirstMin();
-  float avgPeakFirstMaxTime = calcAvgPeakTimeFirstMax();
 
   //Output times and distances
   text("Count: " + cycleCount, width, tmpY); tmpY += 20;
   
-  text("Min: " + nf(peakTimeFirstMin, 1, 2) + "uS / " + nf(peakTimeFirstMin * SPEED_OF_SOUND, 1, 2) + "cm", width, tmpY); tmpY += 15;
-  text("Max: " + nf(peakTimeFirstMax, 1, 2) + "uS / " + nf(peakTimeFirstMax * SPEED_OF_SOUND, 1, 2) + "cm", width, tmpY); tmpY += 20;
+  text("Last Min: " + nf(peakTimeMin, 1, 2) + "uS / " + nf(peakTimeMin * SPEED_OF_SOUND, 1, 2) + "cm", width, tmpY); tmpY += 15;
+  text("Last Max: " + nf(peakTimeMax, 1, 2) + "uS / " + nf(peakTimeMax * SPEED_OF_SOUND, 1, 2) + "cm", width, tmpY); tmpY += 20;
 
-  text("Min Avg: " + nf(avgPeakFirstMinTime, 1, 2) + "uS / " + nf(avgPeakFirstMinTime * SPEED_OF_SOUND, 1, 2) + "cm", width, tmpY); tmpY += 15;
-  text("Max Avg: " + nf(avgPeakFirstMaxTime, 1, 2) + "uS / " + nf(avgPeakFirstMaxTime * SPEED_OF_SOUND, 1, 2) + "cm", width, tmpY); tmpY += 20;
-  
-  text("Avg: " + nf((avgPeakFirstMinTime + avgPeakFirstMaxTime) / 2, 1, 2) + "uS / " + nf(avgPeakFirstMaxTime * SPEED_OF_SOUND, 1, 2) + "cm", width, tmpY); tmpY += 20;
+  text("Avg Min: " + nf(avgPeakMinTime, 1, 2) + "uS / " + nf(avgPeakMinTime * SPEED_OF_SOUND, 1, 2) + "cm", width, tmpY); tmpY += 15;
+  text("Avg Max: " + nf(avgPeakMaxTime, 1, 2) + "uS / " + nf(avgPeakMaxTime * SPEED_OF_SOUND, 1, 2) + "cm", width, tmpY); tmpY += 20;
 
-  text("Min Min: " + nf(minPeakTimeFirstMin, 1, 2) + "uS / " + nf(minPeakTimeFirstMin * SPEED_OF_SOUND, 1, 2) + "cm", width, tmpY); tmpY += 15;
-  text("Max Min: " + nf(minPeakTimeFirstMax, 1, 2) + "uS / " + nf(minPeakTimeFirstMax * SPEED_OF_SOUND, 1, 2) + "cm", width, tmpY); tmpY += 20;
-  
-  /*  
-  text("Min Val: " + nf(peakTimeMin, 1, 2) + "uS / " + nf(peakTimeMin * SPEED_OF_SOUND, 1, 2) + "cm", width, tmpY); tmpY += 15;
-  text("Max Val: " + nf(peakTimeMax, 1, 2) + "uS / " + nf(peakTimeMax * SPEED_OF_SOUND, 1, 2) + "cm", width, tmpY); tmpY += 20;
-  
-  text("Min Val Avg: " + nf(avgPeakMinTime, 1, 2) + "uS / " + nf(avgPeakMinTime * SPEED_OF_SOUND, 1, 2) + "cm", width, tmpY); tmpY += 15;
-  text("Max Val Avg: " + nf(avgPeakMaxTime, 1, 2) + "uS / " + nf(avgPeakMaxTime * SPEED_OF_SOUND, 1, 2) + "cm", width, tmpY); tmpY += 20;
-  */
+  if(ENABLE_MIN_VALUES) {
+    text("Overall Min: " + nf(minPeakTimeMin, 1, 2) + "uS / " + nf(minPeakTimeMin * SPEED_OF_SOUND, 1, 2) + "cm", width, tmpY); tmpY += 15;
+    text("Overall Min: " + nf(minPeakTimeMax, 1, 2) + "uS / " + nf(minPeakTimeMax * SPEED_OF_SOUND, 1, 2) + "cm", width, tmpY); tmpY += 20;
+  }
 
   //Output trigger levels
   float tMinNear = map(triggerMinNear, VOLT_MIN, VOLT_MAX, 0, height);
