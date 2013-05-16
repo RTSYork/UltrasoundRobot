@@ -12,6 +12,7 @@ final static float TEMPERATURE = 22;
 final static int SERIAL_PORT = 0; //Serial port to listen on (-1 for disabled)
 
 //mBed
+/*
 final static int SAMPLE_TIME = 4000; //uS
 final static int SAMPLE_RATE = 80000; //Hz
 
@@ -20,6 +21,7 @@ final static int VAL_MAX = 4095; //12-bit
 
 final static float VOLT_MIN = 0;
 final static float VOLT_MAX = 3.3;
+/*
 
 //Arduino
 /*
@@ -32,6 +34,16 @@ final static int VAL_MAX = 1023; //10-bit
 final static float VOLT_MIN = 0;
 final static float VOLT_MAX = 5;
 */
+
+//FPGA
+final static int SAMPLE_TIME = 142858; //uS
+final static int SAMPLE_RATE = 35000; //Hz
+
+final static int VAL_MIN = 0; //10-bit
+final static int VAL_MAX = 1023; //10-bit
+
+final static float VOLT_MIN = 0;
+final static float VOLT_MAX = 3.3;
 
 //###############################################################################
 
