@@ -851,10 +851,10 @@ void draw() {
       stroke(255, 0, 255);
     } else if(i == peakIndexMin) {
       //Set colour
-      stroke(0, 0, 255);
+      stroke(255, 0, 0);
     } else if(i == peakIndexMax) {
       //Set colour
-      stroke(255, 0, 0);
+      stroke(0, 0, 255);
     } else {
       //Set colour
       stroke(0);
