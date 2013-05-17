@@ -29,16 +29,21 @@ final static String LOG_FILE_NAME = "ultrasound_log_"; //Prefix of log file name
 
 final static boolean SENSOR_AUTOSCALE = true; //Automatically scale rather than using sensor max range
 final static float SENSOR_MAX_RANGE = 300; //mm
-final static float SCREEN_EDGE_OFFSET = 50; //pixels - do not allow line to get closer than this to edge
+final static float SCREEN_EDGE_OFFSET = 5; //pixels - do not allow line to get closer than this to edge
 
 final static float SENSOR_ANGLE = TWO_PI / SENSOR_COUNT;
 
-final static float SENSOR_ANGLE_OFFSET = HALF_PI;
+final static float SENSOR_ANGLE_OFFSET = -SENSOR_ANGLE / 2;
 
 final static float ROBOT_CHASSIS_RADIUS = 47.5; //mm
 final static float ROBOT_WHEEL_RADIUS = 16; //mm
 final static float ROBOT_WHEEL_DEPTH = 6; //mm
 final static float ROBOT_WHEEL_OFFSET = 10; //mm
+final static float ROBOT_CASTER_RADIUS = 5; //mm
+final static float ROBOT_CASTER_OFFSET = 12.5; //mm
+final static float ROBOT_ARROW_LENGTH = 30; //mm
+final static float ROBOT_ARROW_TIP_LENGTH = 10; //mm
+final static float ROBOT_ARROW_TIP_ANGLE = 30 * (180 / PI); //degrees
 
 //States
 final static char WAITING = 0;
@@ -71,7 +76,7 @@ boolean continuous = true;
 
 //Data samples
 int dataIndex = 0;
-int[] data = {120, 113, 050, 134, 200, 120, 075, 070, 022, 160}; //new int[SENSOR_COUNT];
+int[] data = new int[SENSOR_COUNT];
 
 //Cycle counter
 int cycleCount = 0;
@@ -97,6 +102,9 @@ void setup() {
     ex.printStackTrace();
     exit();
   }
+  
+  //Reset data
+  for(int i = 0; i < data.length; i++) data[i] = -1;
   
   //Capture serial ports list
   String[] serialPorts = Serial.list();
@@ -237,6 +245,9 @@ void openRead() {
         
         //Create buffered reader for file input stream
         br = new BufferedReader(new InputStreamReader(fis));
+        
+        //Reset cycle counter
+        cycleCount = 0;
 
         //Load one sample (or all samples in continuous mode)
         readFile();
@@ -261,7 +272,10 @@ void resetRead() {
     
     //Create new buffered reader
     br = new BufferedReader(new InputStreamReader(fis));
-      
+    
+    //Reset cycle counter
+    cycleCount = 0;
+    
     //Read sample from file
     readFile();
    
@@ -473,22 +487,13 @@ void draw() {
   
   //Disable filling
   noFill();
-  
-/*
-final static float SENSOR_MAX_RANGE = 300; //mm
-
-final static float SENSOR_ANGLE = TWO_PI / SENSOR_COUNT;
-
-final static float ROBOT_CHASSIS_RADIUS = 47.5; //mm
-final static float ROBOT_WHEEL_RADIUS = 16; //mm
-final static float ROBOT_WHEEL_DEPTH = 6; //mm
-*/
 
   //Compute smallest dimension
   float smallestDim = min(width - SCREEN_EDGE_OFFSET, height - SCREEN_EDGE_OFFSET);
   
   //Compute scale
-  float scale = smallestDim / (2 * (ROBOT_CHASSIS_RADIUS + (SENSOR_AUTOSCALE ? max(data) : SENSOR_MAX_RANGE)));
+  float maxData = max(data);
+  float scale = smallestDim / (2 * (ROBOT_CHASSIS_RADIUS + (SENSOR_AUTOSCALE ? (maxData != -1 ? maxData : 0) : SENSOR_MAX_RANGE)));
   
   //Compute center point
   float cenX = width / 2;
@@ -499,6 +504,10 @@ final static float ROBOT_WHEEL_DEPTH = 6; //mm
   float scaleWheelRad = ROBOT_WHEEL_RADIUS * scale;
   float scaleWheelDepth = ROBOT_WHEEL_DEPTH * scale;
   float scaleWheelOffset = ROBOT_WHEEL_OFFSET * scale;
+  float scaleRobotCasterRad = ROBOT_CASTER_RADIUS * scale;
+  float scaleRobotCasterOffset = ROBOT_CASTER_OFFSET * scale;
+  float scaleArrowLength = ROBOT_ARROW_LENGTH * scale;
+  float scaleArrowTipLength = ROBOT_ARROW_TIP_LENGTH * scale;
   
   //Draw robot chassis
   ellipse(cenX, cenY, 2 * scaleRobotChassisRadius, 2 * scaleRobotChassisRadius);
@@ -507,22 +516,42 @@ final static float ROBOT_WHEEL_DEPTH = 6; //mm
   rect(cenX - scaleRobotChassisRadius + scaleWheelOffset, cenY - scaleWheelRad, scaleWheelDepth, scaleWheelRad * 2);
   rect(cenX + scaleRobotChassisRadius - scaleWheelDepth - scaleWheelOffset, cenY - scaleWheelRad, scaleWheelDepth, scaleWheelRad * 2);
   
+  //Draw caster
+  ellipse(cenX, cenY + scaleRobotChassisRadius - scaleRobotCasterOffset, 2 * scaleRobotCasterRad, 2 * scaleRobotCasterRad);
+  
+  //Draw direction arrow body
+  line(cenX, cenY - (scaleArrowLength / 2), cenX, cenY + (scaleArrowLength / 2));
+  
+  //Compute direction arrow tip end offset from body
+  float arrowTipX = sin(ROBOT_ARROW_TIP_ANGLE) * scaleArrowTipLength;
+  float arrowTipY = cos(ROBOT_ARROW_TIP_ANGLE) * scaleArrowTipLength;
+
+  //Draw direction arrow tip
+  line(cenX, cenY - (scaleArrowLength / 2), cenX - arrowTipX, cenY - (scaleArrowLength / 2) - arrowTipY);
+  line(cenX, cenY - (scaleArrowLength / 2), cenX + arrowTipX, cenY - (scaleArrowLength / 2) - arrowTipY);
+  
   //Set text alignment
   textAlign(CENTER, CENTER);
   
   //Draw distances
   for(int i = 0; i < data.length; i++) {
     //Compute arc radius for current and next distances
-    float arcRadius = data[i] * scale + scaleRobotChassisRadius;
-    float arcRadiusNext = data[(i + 1) % data.length] * scale + scaleRobotChassisRadius;
+    float arcRadius = (data[i] != -1 ? data[i] : 0) * scale + scaleRobotChassisRadius;
+    float arcRadiusNext = (data[(i + 1) % data.length] != -1 ? data[(i + 1) % data.length] : 0) * scale + scaleRobotChassisRadius;
     
     //Compute arc start and end angle
     float arcAngleStart = i * SENSOR_ANGLE + SENSOR_ANGLE_OFFSET;
     float arcAngleEnd = (i + 1) * SENSOR_ANGLE + SENSOR_ANGLE_OFFSET;
 
+    //Check reading was established
+    if(data[i] == -1) stroke(255, 0, 0);
+    
     //Draw arc
     arc(cenX, cenY, 2 * arcRadius, 2 * arcRadius, arcAngleStart, arcAngleEnd);
-
+    
+    //Change stroke back
+    stroke(0);
+  
     //Compute line end point
     float lineStartX = cenX + (cos(arcAngleEnd) * scaleRobotChassisRadius);
     float lineStartY = cenY + (sin(arcAngleEnd) * scaleRobotChassisRadius);
@@ -536,8 +565,8 @@ final static float ROBOT_WHEEL_DEPTH = 6; //mm
     float textX = cenX + (cos(arcAngleStart + ((arcAngleEnd - arcAngleStart) / 2)) * arcRadius);
     float textY = cenY + (sin(arcAngleStart + ((arcAngleEnd - arcAngleStart) / 2)) * arcRadius);
     
-    //Draw text
-    text(str(data[i]) + "mm", textX, textY);
+    //Draw text depending on whether reading established
+    text((data[i] != -1 ? str(data[i]) + "mm" : "X"), textX, textY);
   }
 }
 
