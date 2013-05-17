@@ -479,13 +479,13 @@ void processSample(String sInput, boolean log) {
       float fSampleTime = sampleToTime(dataIndex);
 
       //Check lower trigger
-      if ((fSampleTime < triggerNearFarChangeTime && fVoltage < triggerMinNear) || (fSampleTime >= triggerNearFarChangeTime && fVoltage < triggerMinFar)) {
+      if ((fSampleTime <= triggerNearFarChangeTime && fVoltage <= triggerMinNear) || (fSampleTime > triggerNearFarChangeTime && fVoltage <= triggerMinFar)) {
         //Set first min index the first time trigger exceeded
         if(peakIndexMin == -1) peakIndexMin = dataIndex;
       }
 
       //Check upper trigger
-      if ((fSampleTime < triggerNearFarChangeTime && fVoltage > triggerMaxNear) || (fSampleTime >= triggerNearFarChangeTime && fVoltage > triggerMaxFar)) {
+      if ((fSampleTime <= triggerNearFarChangeTime && fVoltage >= triggerMaxNear) || (fSampleTime > triggerNearFarChangeTime && fVoltage >= triggerMaxFar)) {
         //Set first max index the first time trigger exceeded
         if(peakIndexMax == -1) peakIndexMax = dataIndex;
       }
