@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!DOCTYPE eagle SYSTEM "eagle.dtd">
-<eagle version="6.3">
+<eagle version="6.4">
 <drawing>
 <settings>
 <setting alwaysvectorfont="no"/>
@@ -302,29 +302,13 @@ ULN and UDN Series&lt;p&gt;
 </plain>
 <instances>
 <instance part="IC1" gate="G$1" x="45.72" y="50.8"/>
-<instance part="U$1" gate="G$1" x="73.66" y="66.04" rot="MR0"/>
-<instance part="P+1" gate="1" x="88.9" y="60.96" rot="R270"/>
+<instance part="U$1" gate="G$1" x="66.04" y="58.42" rot="MR180"/>
+<instance part="P+1" gate="1" x="78.74" y="60.96" rot="R270"/>
 <instance part="GND1" gate="1" x="30.48" y="35.56"/>
 </instances>
 <busses>
 </busses>
 <nets>
-<net name="N$1" class="0">
-<segment>
-<pinref part="IC1" gate="G$1" pin="O1"/>
-<wire x1="58.42" y1="60.96" x2="68.58" y2="60.96" width="0.1524" layer="91"/>
-<pinref part="U$1" gate="G$1" pin="2"/>
-<wire x1="68.58" y1="60.96" x2="68.58" y2="63.5" width="0.1524" layer="91"/>
-</segment>
-</net>
-<net name="+5V" class="0">
-<segment>
-<pinref part="U$1" gate="G$1" pin="1"/>
-<wire x1="76.2" y1="63.5" x2="76.2" y2="60.96" width="0.1524" layer="91"/>
-<pinref part="P+1" gate="1" pin="+5V"/>
-<wire x1="76.2" y1="60.96" x2="86.36" y2="60.96" width="0.1524" layer="91"/>
-</segment>
-</net>
 <net name="GND" class="0">
 <segment>
 <pinref part="IC1" gate="G$1" pin="GND"/>
@@ -338,6 +322,20 @@ ULN and UDN Series&lt;p&gt;
 <pinref part="IC1" gate="G$1" pin="I1"/>
 <wire x1="33.02" y1="60.96" x2="27.94" y2="60.96" width="0.1524" layer="91"/>
 <label x="27.94" y="60.96" size="1.778" layer="95" rot="R180"/>
+</segment>
+</net>
+<net name="+5V" class="0">
+<segment>
+<pinref part="U$1" gate="G$1" pin="2"/>
+<pinref part="P+1" gate="1" pin="+5V"/>
+<wire x1="76.2" y1="60.96" x2="71.12" y2="60.96" width="0.1524" layer="91"/>
+</segment>
+</net>
+<net name="N$1" class="0">
+<segment>
+<pinref part="IC1" gate="G$1" pin="O1"/>
+<pinref part="U$1" gate="G$1" pin="1"/>
+<wire x1="63.5" y1="60.96" x2="58.42" y2="60.96" width="0.1524" layer="91"/>
 </segment>
 </net>
 </nets>
