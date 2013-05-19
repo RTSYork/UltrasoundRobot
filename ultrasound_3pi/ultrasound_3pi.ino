@@ -1,11 +1,18 @@
-#include <OrangutanAnalog.h>
+//#include <OrangutanAnalog.h>
 #include <OrangutanBuzzer.h>
 //#include <OrangutanLCD.h>
-#include <OrangutanLEDs.h>
+//#include <OrangutanLEDs.h>
 #include <OrangutanMotors.h>
 //#include <OrangutanPushbuttons.h>
 
 #include <avr/pgmspace.h>
+
+// Stop pesky deprecated string constants warnings
+#pragma GCC diagnostic ignored "-Wwrite-strings"
+
+// Workaround for gcc bug
+#undef PROGMEM
+#define PROGMEM __attribute__((section(".progmem.data")))
 
 // Settings
 const unsigned long odoInterval = 100; // ms
@@ -37,20 +44,39 @@ const double wheelCircumference = wheelDiameter * PI; // mm
 #define encoderCountToDist(x) (((double) (x)) * wheelCircumference) / encoderClicksPerRev
 #define distToEncoderCount(x) (((double) (x)) * encoderClicksPerRev) / wheelCircumference
 
-// Defintions - angle conversions
+// Defintions - Angle conversions
 #define radiansToDegrees(x) ((double) (x)) * (180.0 / PI)
 #define degreesToRadians(x) (((double) (x)) * PI) / 180.0
 
 // Definitions - Motor speeds
 #define setMotorSpeeds() OrangutanMotors::setSpeeds((motorDir & 0x02 ? -1 : 1) * motorSpeedLeft, (motorDir & 0x01 ? -1 : 1) * motorSpeedRight)
 
-// Definitions - operating mode
+// Definitions - Commands
+enum commands {
+  CMD_NONE = -1, // No command
+  CMD_SET_DEBUG = 0x01, // Enable / disable debugging mode
+  CMD_SET_MODE = 0x02, // Set platform mode (manual / automatic)
+  CMD_SET_MOTOR_SPD = 0x03, // Set motor speeds (indivual in manual mode / maximum in automatic mode)
+  CMD_SET_POS = 0x04, // Set target coordinates
+  CMD_GET_POS = 0x05, // Get current coordinates
+  CMD_BEEP = 0x06 // Emit beep
+};
+
+// Definitions - Command responses
+enum responses {
+  RESP_OK = 0x01, // Command succeeded
+  RESP_ERR = 0x02, // Command failed
+  RESP_POS = 0x03, // Position update
+  RESP_BTN = 0x04 // Button press
+};
+
+// Definitions - Operating mode
 enum operating_mode {
   MODE_MANUAL,
   MODE_AUTOMATIC,
 };
 
-// Defintions - motion stages
+// Defintions - Motion stages
 enum motion_state {
   MOTION_WAITING,
   MOTION_READY,
@@ -78,10 +104,11 @@ const char tune2[] PROGMEM = "L16 cdegreg4";
 const char tune3[] PROGMEM = "o7l16crc";
 
 // Strings
-const char debugS[] = "DBG: ";
+const char debugS[] = "#DBG: ";
 
 // Variables - general
 operating_mode mode = MODE_MANUAL;
+commands serialCmd = CMD_NONE;
 
 // Variables - button press state
 volatile unsigned long buttonTimePrev = 0;
@@ -121,10 +148,10 @@ unsigned char boolDebugEnabled = 0;
 
 void setup() {
   // Init serial
-  Serial.begin(115200);
+  Serial.begin(57600);
 
   // Send welcome message
-  Serial.println("3PI!");
+  Serial.print("#3PI...");
 
   // Init buttons, enable pull-up resistors and interrupts
   PORTB |= BUTTON_A | BUTTON_B | BUTTON_C;
@@ -136,7 +163,10 @@ void setup() {
   PCMSK2 |= ENCODER_LEFT | ENCODER_RIGHT;
 
   // Enable interrupts
-  sei();  
+  sei();
+  
+  // Send welcome message
+  Serial.println("Ready!");
 
   // Play welcome tune
   OrangutanBuzzer::playFromProgramSpace(tune1);
@@ -190,164 +220,171 @@ void loop() {
 
 // Handle serial communications with FPGA
 void processSerial() {
-  // Check for serial data
-  if (Serial.available() > 0) {
-    // Get command byte
-    unsigned char command = Serial.read();
-
-    // Act on command
-    switch(command) {
-    case 0x01: 
-      {
-        // Set operating mode
-        while(Serial.available() < 1);
-        mode = (operating_mode) Serial.read();
-
-        // Check which mode is begine entered
-        switch(mode) {
-        case MODE_MANUAL:
-          {
-            // Disable motors
-            motorSpeedLeft = 0;
-            motorSpeedRight = 0;
-
-            // Set motor speeds
-            setMotorSpeeds();
-            
-            // Output debug info
-            if(boolDebugEnabled) {
-              Serial.print(debugS);
-              Serial.println("MODE: MANUAL");
-            }
-            break;
-          }
-        case MODE_AUTOMATIC:
-          {
-            // Force change motion state
-            motStage = MOTION_WAITING;
-            
-            // Output debug info
-            if(boolDebugEnabled) {
-              Serial.print(debugS);
-              Serial.println("MODE: AUTOMATIC");
-            }
-            break;
-          }
-        }
-        break;
-      }
-    case 0x02: 
-      {
-        // Set motor speed in manual mode or maximum speed in automatic mode
-        switch(mode) {
-        case MODE_MANUAL:
-          {
-            // Set motor speed
-            while(Serial.available() < 3);
-            motorDir = (unsigned char) Serial.read();
-            motorSpeedLeft = (unsigned char) Serial.read();
-            motorSpeedRight = (unsigned char) Serial.read();
-
-            // Set motor speeds
-            setMotorSpeeds();
-
-            // Output debug info
-            if(boolDebugEnabled) {
-              Serial.print(debugS);
-              Serial.print("MSPD: ");
-              Serial.print(motorDir, DEC);
-              Serial.print(" # ");
-              Serial.print(motorSpeedLeft, DEC);
-              Serial.print(" # ");
-              Serial.println(motorSpeedRight, DEC);
-            }
-            break;
-          }
-        case MODE_AUTOMATIC:
-          {
-            while(Serial.available() < 1);
-            motMaxSpeed = (unsigned char) Serial.read();
-
-            // Output debug info
-            if(boolDebugEnabled) {
-              Serial.print(debugS);
-              Serial.print("ASPD: ");
-              Serial.println(motMaxSpeed, DEC);
-            }
-            break;
-          }
-        }
-        break;
-      }
-    case 0x03:
-      {
-        // Set target position
-        while(Serial.available() < 6);
-        motTargetPos.X = (int) (((unsigned int) Serial.read() << 8) | (unsigned int) Serial.read());
-        motTargetPos.Y = (int) (((unsigned int) Serial.read() << 8) | (unsigned int) Serial.read());
-        motTargetPos.Theta = degreesToRadians((int) (((unsigned int) Serial.read() << 8) | (unsigned int) Serial.read()));
-
-        // Limit theta
-        while(motTargetPos.Theta > PI) motTargetPos.Theta -= (2 * PI);
-        while(motTargetPos.Theta < -PI) motTargetPos.Theta += (2 * PI);
-
-        // Change motion state
-        motStage = MOTION_READY;
-
-        // Output debug info
-        if(boolDebugEnabled){
-          Serial.print(debugS);
-          Serial.print("TPOS: ");
-          Serial.print(motTargetPos.X, DEC); 
-          Serial.print(" # ");
-          Serial.print(motTargetPos.Y, DEC); 
-          Serial.print(" # ");
-          Serial.println(radiansToDegrees(motTargetPos.Theta), DEC); 
-        }
-        break;
-      }
-    case 0x04:
-      {
-        // Get current position
-        Serial.write((uint8_t*) &(odoCurrentPos.X), sizeof(odoCurrentPos.X));
-        Serial.write((uint8_t*) &(odoCurrentPos.Y), sizeof(odoCurrentPos.Y));
-        Serial.write((uint8_t*) &(odoCurrentPos.Theta), sizeof(odoCurrentPos.Theta));
-        break;
-      }
-    case 0xfe: 
-      {
-        // Beep
-        OrangutanBuzzer::playNote(NOTE_A(5), 100, 15);
-        break;
-      }
-    case 0xff:
-      {
-        // Set debugging state
-        while(Serial.available() < 1);
-        boolDebugEnabled = (unsigned char) Serial.read();
-
-        // Output debug info
-        Serial.print(debugS);
-        Serial.println(boolDebugEnabled ? "Enabled" : "Disabled");
-        break;
-      }
-    default:
-      // Bad command
-      OrangutanBuzzer::playFromProgramSpace(tune3);
-      break;
-    }
-  }
-
-  // Check button state
+  // Check button state, get this out of the way before things get complicated
   if(buttonPress) {
     // Copy and reset button state
     unsigned char tmpButtonPress = buttonPress;
     buttonPress = 0;
 
     // Send button press
-    Serial.write(0x01);
+    Serial.write(RESP_BTN);
     Serial.write(tmpButtonPress);
   }
+  
+  // Attempt to read byte from UART if there is no command pending
+  if(serialCmd == CMD_NONE && Serial.available() > 0) serialCmd = (commands) Serial.read();
+
+  // Act on command
+  switch(serialCmd) {
+  case CMD_NONE: 
+    {
+      // Do nothing
+      return;
+    }
+  case CMD_SET_DEBUG: 
+    {
+      // Set debugging state
+      while(Serial.available() < 1) return;
+      boolDebugEnabled = (unsigned char) Serial.read();
+
+      // Output debug info
+      debugPrint("DEBUG ", false);
+      Serial.println(boolDebugEnabled ? "ENABLED" : "DISABLED");
+      break;
+    }
+  case CMD_SET_MODE: 
+    {
+      // Set operating mode
+      while(Serial.available() < 1) return;
+      mode = (operating_mode) Serial.read();
+
+      // Check which mode is begine entered
+      switch(mode) {
+      case MODE_MANUAL:
+        {
+          // Disable motors
+          motorSpeedLeft = 0;
+          motorSpeedRight = 0;
+
+          // Set motor speeds
+          setMotorSpeeds();
+
+          // Output debug info
+          debugPrint("MODE - MANUAL", true);
+          break;
+        }
+      case MODE_AUTOMATIC:
+        {
+          // Force change motion state
+          motStage = MOTION_WAITING;
+
+          // Output debug info
+          debugPrint("MODE - AUTO", true);
+          break;
+        }
+      }
+      break;
+    }
+  case CMD_SET_MOTOR_SPD: 
+    {
+      // Set motor speed in manual mode or maximum speed in automatic mode
+      switch(mode) {
+      case MODE_MANUAL:
+        {
+          // Set motor speed
+          while(Serial.available() < 3) return;
+          motorDir = (unsigned char) Serial.read();
+          motorSpeedLeft = (unsigned char) Serial.read();
+          motorSpeedRight = (unsigned char) Serial.read();
+
+          // Set motor speeds
+          setMotorSpeeds();
+
+          // Output debug info
+          if(boolDebugEnabled) {
+            debugPrint("MSPD: ", false);
+            Serial.print(motorDir, DEC);
+            Serial.print(", ");
+            Serial.print(motorSpeedLeft, DEC);
+            Serial.print(", ");
+            Serial.println(motorSpeedRight, DEC);
+          }
+          break;
+        }
+      case MODE_AUTOMATIC:
+        {
+          while(Serial.available() < 1) return;
+          motMaxSpeed = (unsigned char) Serial.read();
+
+          // Output debug info
+          if(boolDebugEnabled) {
+            debugPrint("ASPD: ", false);
+            Serial.println(motMaxSpeed, DEC);
+          }
+          break;
+        }
+      }
+      break;
+    }
+  case CMD_SET_POS: 
+    {
+      // Set target position
+      while(Serial.available() < 6) return;
+      motTargetPos.X = (int) (((unsigned int) Serial.read() << 8) | (unsigned int) Serial.read());
+      motTargetPos.Y = (int) (((unsigned int) Serial.read() << 8) | (unsigned int) Serial.read());
+      motTargetPos.Theta = degreesToRadians((int) (((unsigned int) Serial.read() << 8) | (unsigned int) Serial.read()));
+
+      // Limit theta
+      while(motTargetPos.Theta > PI) motTargetPos.Theta -= (2 * PI);
+      while(motTargetPos.Theta < -PI) motTargetPos.Theta += (2 * PI);
+
+      // Change motion state
+      motStage = MOTION_READY;
+
+      // Output debug info
+      if(boolDebugEnabled) {
+        debugPrint("TPOS: ", false);
+        Serial.print(motTargetPos.X, DEC); 
+        Serial.print(", ");
+        Serial.print(motTargetPos.Y, DEC); 
+        Serial.print(", ");
+        Serial.println(radiansToDegrees(motTargetPos.Theta), DEC); 
+      }
+      break;
+    }
+  case CMD_GET_POS: 
+    {
+      // Get current position
+      outputPosition();
+      break;
+    }
+  case CMD_BEEP: 
+    { 
+      // Beep
+      OrangutanBuzzer::playNote(NOTE_A(5), 100, 15);
+      break;
+    }
+  default:
+    {
+      // Bad command
+      OrangutanBuzzer::playFromProgramSpace(tune3);
+
+      // Reset command
+      serialCmd = CMD_NONE;
+    
+      // Send error response
+      Serial.write(RESP_ERR);
+    
+      // Return early
+      return;
+    }
+  }
+  
+  // Reset command
+  serialCmd = CMD_NONE;
+  
+  // Send success message
+  Serial.write(RESP_OK);
 }
 
 // Update current position using wheel encoders
@@ -391,12 +428,11 @@ void processOdometry() {
   // Output debug info
   if(boolDebugEnabled && millis() >= odoNextDebugTime) {
     // Dump info
-    Serial.print(debugS);
-    Serial.print("CPOS: ");
+    debugPrint("CPOS: ", false);
     Serial.print(odoCurrentPos.X, DEC); 
-    Serial.print(" # ");
+    Serial.print(", ");
     Serial.print(odoCurrentPos.Y, DEC); 
-    Serial.print(" # ");
+    Serial.print(", ");
     Serial.println(odoCurrentPos.Theta * (180 / PI), DEC);
 
     // Compute next time
@@ -436,21 +472,21 @@ void processMotion() {
         {
           // Compute angle between current position and target 
           double targetAngle = atan2(motTargetPos.Y - odoCurrentPos.Y, motTargetPos.X - odoCurrentPos.X);
-      
+
           // Compute shortest angle between current heading and target heading
           double targetShortestAngle = targetAngle - odoCurrentPos.Theta;
-    
+
           // Limit shortest angle
           while(targetShortestAngle > PI) targetShortestAngle -= (2 * PI);
           while(targetShortestAngle < -PI) targetShortestAngle += (2 * PI);
 
           // Compute distance travelled by each wheel in encoder clicks
           double targetClicks = round(distToEncoderCount((fabs(targetShortestAngle) * (wheelSeparation * PI)) / (2 * PI)));
-         
+
           // Compute target count of each encoder          
           motCountTargetLeft = tmpEncCountLeft + (unsigned long) targetClicks;
           motCountTargetRight = tmpEncCountRight + (unsigned long) targetClicks;
-                   
+
           // Set motor directions
           if(targetShortestAngle < 0) {
             motorDir = 0x02;
@@ -473,7 +509,7 @@ void processMotion() {
             // Compute target count of each encoder          
             motCountTargetLeft = tmpEncCountLeft + (unsigned long) targetClicks;
             motCountTargetRight = tmpEncCountRight + (unsigned long) targetClicks;
-            
+
             // Set motor directions
             motorDir = 0x00;
 
@@ -488,18 +524,18 @@ void processMotion() {
           if(tmpEncCountLeft >= motCountTargetLeft || tmpEncCountRight >= motCountTargetRight) {
             // Compute shortest angle between current heading and target heading
             double targetShortestAngle = motTargetPos.Theta - odoCurrentPos.Theta;
-      
+
             // Limit shortest angle
             while(targetShortestAngle > PI) targetShortestAngle -= (2 * PI);
             while(targetShortestAngle < -PI) targetShortestAngle += (2 * PI);
-  
+
             // Compute distance travelled by each wheel in encoder clicks
             double targetClicks = round(distToEncoderCount((fabs(targetShortestAngle) * (wheelSeparation * PI)) / (2 * PI)));
-            
+
             // Compute target count of each encoder          
             motCountTargetLeft = tmpEncCountLeft + (unsigned long) targetClicks;
             motCountTargetRight = tmpEncCountRight + (unsigned long) targetClicks;
-          
+
             // Set motor directions
             if(targetShortestAngle < 0) {
               motorDir = 0x02;
@@ -519,6 +555,9 @@ void processMotion() {
           if(tmpEncCountLeft >= motCountTargetLeft || tmpEncCountRight >= motCountTargetRight) {
             // Set motor directions
             motorDir = 0x00;
+            
+            // Output new position
+            outputPosition();
 
             // Change state
             motStage = MOTION_WAITING;
@@ -556,13 +595,13 @@ void processMotion() {
       // Output debug info
       if(boolDebugEnabled && millis() >= motNextDebugTime) {
         // Dump info
-        Serial.print("DBG: MOT: ");
+        debugPrint("MOT: ", false);
         Serial.print(diffLeftRight, DEC); 
-        Serial.print(" -> ");
+        Serial.print(" - ");
         Serial.print(pwrDiff, DEC); 
-        Serial.print(" -> ");
+        Serial.print(" - ");
         Serial.print(motorSpeedLeft, DEC); 
-        Serial.print(" # ");
+        Serial.print(", ");
         Serial.println(motorSpeedRight, DEC);
 
         // Compute next time
@@ -600,8 +639,30 @@ unsigned long readISRULong(volatile unsigned long* ptr) {
   // Read value until it doesn't change
   do {
     tmp = *ptr;
-  } 
-  while(tmp != *ptr);
+  } while(tmp != *ptr);
 
   return tmp;
+}
+
+void outputPosition() {
+  int X = odoCurrentPos.X;
+  int Y = odoCurrentPos.Y;
+  int theta = radiansToDegrees(odoCurrentPos.Theta);
+  
+  Serial.write(RESP_POS);
+  Serial.write((uint8_t*) &X, sizeof(X));
+  Serial.write((uint8_t*) &Y, sizeof(Y));
+  Serial.write((uint8_t*) &theta, sizeof(theta));
+}
+
+// Print formatted debugging information
+void debugPrint(char* str, char newLine) {
+  if(boolDebugEnabled) {
+    Serial.print(debugS);
+    if(newLine) {
+      Serial.println(str);
+    } else {
+      Serial.print(str);
+    }
+  }
 }
