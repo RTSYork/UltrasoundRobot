@@ -31,6 +31,12 @@ void InterruptHandler_UART(void *CallbackRef);
 
 int uart_getchar(volatile uart_buff *buf);
 int uart_putchar(volatile uart_buff *buf, char c);
+
+int get_tx_count(volatile uart_buff *buf);
+int get_rx_count(volatile uart_buff *buf);
+
 int uart_print(volatile uart_buff *buf, char* str);
+
+int uart_print_int(volatile uart_buff *buf, int val, unsigned char isSigned);
 
 #endif /* UART_H_ */

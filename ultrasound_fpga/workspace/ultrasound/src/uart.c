@@ -120,12 +120,57 @@ int uart_putchar(volatile uart_buff *buf, char c) {
 	return 1;
 }
 
+int get_tx_count(volatile uart_buff *buf) {
+	// Return TX buffer byte count
+	return buf->countTX;
+}
+
+int get_rx_count(volatile uart_buff *buf) {
+	// Return RX buffer byte count
+	return buf->countRX;
+}
+
 int uart_print(volatile uart_buff *buf, char* str) {
 	// Send characters until null terminator reached
 	do {
 		// Print character, retying on buffer full
 		while(uart_putchar(buf, *str) == -1);
 	} while (*++str != '\0');
+
+	// Yey!
+	return 1;
+}
+
+int uart_print_int(volatile uart_buff *buf, int val, unsigned char isSigned) {
+    // Handle sign
+	if(val < 0 && isSigned) {
+	    // Output sign
+	    uart_putchar(buf, '-');
+
+	    // Remove sign
+	    val = -val;
+    }
+
+    // Handle zero
+    if(val == 0) {
+        // Output digit
+    	uart_putchar(buf, '0');
+    } else {
+        // Generate string
+        char str[12]; // Allocate enough memory for max integer length and null terminator
+        char *ptr = &str[12]; // Setup pointer at end of string
+        *ptr = '\0'; // Null terminate string
+	    while(val > 0) {
+		    // Generate character
+		    *--ptr = '0' + (val % 10);
+
+		    // Shift number
+		    val /= 10;
+	    }
+
+	    // Print string
+	    uart_print(buf, ptr);
+    }
 
 	// Yey!
 	return 1;

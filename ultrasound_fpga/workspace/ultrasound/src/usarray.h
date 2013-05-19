@@ -36,11 +36,16 @@ int init_usarray();
 void InterruptHandler_US_GPIO(void *CallbackRef);
 void InterruptHandler_US_Timer(void *CallbackRef);
 
-void usarray_setmode(enum US_MODE newMode);
-void usarray_selectSensor(unsigned char newSensor);
+void usarray_set_mode(enum US_MODE newMode);
 enum US_MODE usarray_get_mode();
+
+void usarray_set_sensor(unsigned char newSensor);
 unsigned char usarray_get_sensor();
+
+void usarray_set_triggers(unsigned short changever, unsigned short nearLower, unsigned short nearUpper, unsigned short farLower, unsigned short farUpper);
+
 enum US_STATE usarray_get_status();
+
 void usarray_scan();
 void usarray_update_ranges();
 void usarray_reset();

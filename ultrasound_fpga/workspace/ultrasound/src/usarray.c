@@ -6,7 +6,7 @@
 #include "xgpio.h"
 #include "pulsegen.h"
 
-#define USvoltageToTriggerLevel(x) (unsigned short) ((((unsigned int) x) * ((1 << USADCPrecision) - 1)) / USADCReference) // Voltage expressed in hundredths
+#define USVoltageToTriggerLevel(x) (unsigned short) ((((unsigned int) x) * ((1 << USADCPrecision) - 1)) / USADCReference) // Voltage expressed in hundredths
 #define USSampleIndexToTime(x) (unsigned short) ((((1000000 * 10) / US_SAMPLE_RATE) * (((unsigned int) x) + 1)) / 10) // Time expressed in uS
 #define USTimeToSampleIndex(x) (unsigned short) ((((unsigned int) x) * 10) / ((1000000 * 10) / US_SAMPLE_RATE) - 1) // Time in uS
 
@@ -21,10 +21,10 @@ volatile unsigned short usWaveformData[US_SENSOR_COUNT][US_RX_COUNT]; // Raw wav
 volatile signed short usRangeReadings[US_SENSOR_COUNT]; // Latest range readings - stored as sample indexes
 
 volatile unsigned short usTriggerChangeIndex = USTimeToSampleIndex(1200); // Trigger changeover time
-volatile unsigned short usTriggerNearUpper = USvoltageToTriggerLevel(140); // Upper trigger level
-volatile unsigned short usTriggerNearLower = USvoltageToTriggerLevel(164); // Lower trigger level
-volatile unsigned short usTriggerFarUpper = USvoltageToTriggerLevel(146); // Upper trigger level
-volatile unsigned short usTriggerFarLower = USvoltageToTriggerLevel(158); // Lower trigger level
+volatile unsigned short usTriggerNearUpper = USVoltageToTriggerLevel(140); // Upper trigger level
+volatile unsigned short usTriggerNearLower = USVoltageToTriggerLevel(164); // Lower trigger level
+volatile unsigned short usTriggerFarUpper = USVoltageToTriggerLevel(146); // Upper trigger level
+volatile unsigned short usTriggerFarLower = USVoltageToTriggerLevel(158); // Lower trigger level
 
 volatile signed short usTemperature = 210; // Temperature in degrees C, expressed in tenths
 
@@ -186,14 +186,9 @@ void InterruptHandler_US_GPIO(void *CallbackRef) {
 	XGpio_WriteReg(InstancePtr->BaseAddress, XGPIO_ISR_OFFSET, GPIO_Reg & 0x01);
 }
 
-void usarray_setmode(enum US_MODE newMode) {
+void usarray_set_mode(enum US_MODE newMode) {
 	// Select new mode
 	usMode = newMode;
-}
-
-void usarray_selectSensor(unsigned char newSensor) {
-	// Select new sensor
-	usSensorIndex = newSensor;
 }
 
 enum US_MODE usarray_get_mode() {
@@ -201,9 +196,23 @@ enum US_MODE usarray_get_mode() {
 	return usMode;
 }
 
+void usarray_set_sensor(unsigned char newSensor) {
+	// Select new sensor
+	usSensorIndex = newSensor;
+}
+
 unsigned char usarray_get_sensor() {
 	// Return sensor
 	return usSensorIndex;
+}
+
+void usarray_set_triggers(unsigned short changever, unsigned short nearLower, unsigned short nearUpper, unsigned short farLower, unsigned short farUpper) {
+	// Update trigger levels
+	usTriggerChangeIndex = USTimeToSampleIndex(changever);
+	usTriggerNearLower = USVoltageToTriggerLevel(nearLower);
+	usTriggerNearUpper = USVoltageToTriggerLevel(nearUpper);
+	usTriggerFarUpper = USVoltageToTriggerLevel(farLower);
+	usTriggerFarLower = USVoltageToTriggerLevel(farUpper);
 }
 
 enum US_STATE usarray_get_status() {
