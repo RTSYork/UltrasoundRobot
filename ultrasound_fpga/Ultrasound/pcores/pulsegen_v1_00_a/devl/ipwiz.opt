@@ -1,0 +1,11 @@
+-batch 
+-create pulsegen 
+-ver 1.00.a 
+-dir "C:\temp\ultrasound_fpga\Ultrasound" 
+-lang vhdl 
+-bus axi4lite s 
+-rst 
+-reg 1 
+-xps 
+-ise 
+-driver 

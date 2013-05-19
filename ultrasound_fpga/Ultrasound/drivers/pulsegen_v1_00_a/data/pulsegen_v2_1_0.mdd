@@ -1,0 +1,9 @@
+OPTION psf_version = 2.1.0;
+
+BEGIN DRIVER pulsegen
+
+  OPTION supported_peripherals = (pulsegen);
+  OPTION depends = (common_v1_00_a);
+  OPTION copyfiles = all;
+
+END DRIVER

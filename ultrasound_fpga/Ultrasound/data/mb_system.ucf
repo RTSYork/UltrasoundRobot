@@ -1,0 +1,49 @@
+#
+# pin constraints
+#
+NET CLK_66MHZ LOC = "K15"  |  IOSTANDARD = "LVCMOS33";
+NET DIP_Switches_4Bits_TRI_I[0] LOC = "B3"  |  IOSTANDARD = "LVCMOS33"  |  PULLDOWN;
+NET DIP_Switches_4Bits_TRI_I[1] LOC = "A3"  |  IOSTANDARD = "LVCMOS33"  |  PULLDOWN;
+NET DIP_Switches_4Bits_TRI_I[2] LOC = "B4"  |  IOSTANDARD = "LVCMOS33"  |  PULLDOWN;
+NET DIP_Switches_4Bits_TRI_I[3] LOC = "A4"  |  IOSTANDARD = "LVCMOS33"  |  PULLDOWN;
+NET LEDs_4Bits_TRI_O[0] LOC = "P4"  |  IOSTANDARD = "LVCMOS18";
+NET LEDs_4Bits_TRI_O[1] LOC = "L6"  |  IOSTANDARD = "LVCMOS18";
+NET LEDs_4Bits_TRI_O[2] LOC = "F5"  |  IOSTANDARD = "LVCMOS18";
+NET LEDs_4Bits_TRI_O[3] LOC = "C2"  |  IOSTANDARD = "LVCMOS18";
+NET RESET LOC = "V4"  |  IOSTANDARD = "LVCMOS33"  |  TIG  |  PULLDOWN;
+NET SPI_FLASH_MISO LOC = "R13"  |  IOSTANDARD = "LVCMOS33";
+NET SPI_FLASH_MOSI LOC = "T13"  |  IOSTANDARD = "LVCMOS33";
+NET SPI_FLASH_SCLK LOC = "R15"  |  IOSTANDARD = "LVCMOS33";
+NET SPI_FLASH_SS LOC = "V3"  |  IOSTANDARD = "LVCMOS33";
+NET USB_Uart_sin LOC = "R7"  |  IOSTANDARD = "LVCMOS33";
+NET USB_Uart_sout LOC = "T7"  |  IOSTANDARD = "LVCMOS33";
+#
+# additional constraints
+#
+
+NET "CLK_66MHZ" TNM_NET = sys_clk_pin;
+TIMESPEC TS_sys_clk_pin = PERIOD sys_clk_pin 66666 kHz;
+
+### Set Vccaux for S6LX9 MicroBoard to 3.3V ###
+CONFIG VCCAUX = "3.3" ;
+
+### Pin connections ###
+NET axi_pulsegen_ustx_TX_Clk_pin LOC = "G14"  |  IOSTANDARD = "LVCMOS33";
+NET axi_pulsegen_ustx_TX_En_pin LOC = "F14"  |  IOSTANDARD = "LVCMOS33";
+NET axi_pulsegen_ustx_TX_Addr_pin[0] LOC = "F15"  |  IOSTANDARD = "LVCMOS33";
+NET axi_pulsegen_ustx_TX_Addr_pin[1] LOC = "F16"  |  IOSTANDARD = "LVCMOS33";
+NET axi_pulsegen_ustx_TX_Addr_pin[2] LOC = "C17"  |  IOSTANDARD = "LVCMOS33";
+NET axi_pulsegen_ustx_TX_Addr_pin[3] LOC = "C18"  |  IOSTANDARD = "LVCMOS33";
+
+NET axi_spi_usrx_SCK_pin LOC = "E18"  |  IOSTANDARD = "LVCMOS33";
+NET axi_spi_usrx_MISO_pin LOC = "G13"  |  IOSTANDARD = "LVCMOS33";
+NET axi_spi_usrx_MOSI_pin LOC = "H12"  |  IOSTANDARD = "LVCMOS33";
+NET axi_spi_usrx_SS_pin LOC = "E16"  |  IOSTANDARD = "LVCMOS33";
+
+NET axi_uartlite_3pi_RX_pin LOC = "D18"  |  IOSTANDARD = "LVCMOS33";
+NET axi_uartlite_3pi_TX_pin LOC = "D17"  |  IOSTANDARD = "LVCMOS33";
+
+NET axi_gpio_0_GPIO_IO_pin[0] LOC = "K12"  |  IOSTANDARD = "LVCMOS33";
+NET axi_gpio_0_GPIO_IO_pin[1] LOC = "K13"  |  IOSTANDARD = "LVCMOS33";
+NET axi_gpio_0_GPIO_IO_pin[2] LOC = "F17"  |  IOSTANDARD = "LVCMOS33";
+NET axi_gpio_0_GPIO_IO_pin[3] LOC = "F18"  |  IOSTANDARD = "LVCMOS33";

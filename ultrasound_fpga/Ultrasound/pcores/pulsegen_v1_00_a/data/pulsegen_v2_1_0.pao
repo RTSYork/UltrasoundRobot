@@ -1,0 +1,10 @@
+##############################################################################
+## Filename:          C:/temp/ultrasound_fpga/Ultrasound/pcores/pulsegen_v1_00_a/data/pulsegen_v2_1_0.pao
+## Description:       Peripheral Analysis Order
+## Date:              Fri May 03 14:32:16 2013 (by Create and Import Peripheral Wizard)
+##############################################################################
+
+lib proc_common_v3_00_a  all 
+lib axi_lite_ipif_v1_01_a  all 
+lib pulsegen_v1_00_a user_logic vhdl
+lib pulsegen_v1_00_a pulsegen vhdl
