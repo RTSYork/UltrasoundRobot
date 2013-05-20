@@ -1,6 +1,5 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 #include "platform.h"
 #include "xparameters.h"
 
@@ -23,7 +22,8 @@ enum DEBUG_CMD {
 	DEBUG_CMD_SET_US_TRIGGERS = 0x04, // Set ultrasound array trigger levels
 	DEBUG_CMD_SET_US_OUTPUT = 0x05, // Enable / disable ultrasound array data output
 	DEBUG_CMD_ROBOT_COMMAND = 0x06, // Issue command to mobile platform
-	DEBUG_CMD_ROBOT_PASSTHROUGH = 0x07 // Enter robot passthrough mode, must reset to exit
+	DEBUG_CMD_PING = 0x07, // Issue ping command
+	DEBUG_CMD_ROBOT_PASSTHROUGH = 0x08 // Enter robot passthrough mode, must reset to exit
 };
 
 // Ultrasound data output modes
@@ -75,6 +75,14 @@ void ProcessSerial3PI();
 void ProcessUSArray();
 void Passthrough3PI();
 
+// Helpers to issue commands to mobile platform
+void mpSetDebug(unsigned char state);
+void mpSetMode(unsigned char mode);
+void mpSetMotorSpeed(unsigned char dirMaxSpeed, unsigned char left, unsigned char right);
+void mpSetPos(short X, short Y, short Theta);
+void mpGetPos();
+void mpBeep();
+
 void InterruptHandler_Timer_Sys(void *CallbackRef); // Increment system tick counter
 
 void heartBeat(); // Flash heartbeat LED
@@ -85,8 +93,8 @@ void debugPrint(char* str, char newLine); // Print debugging message if debuggin
 
 // Variables - devices
 XIntc InterruptController; // Interrupt controller shared between all devices
-volatile uart_buff UartBuffDebug; // UART connection between PC and FPGA
-volatile uart_buff UartBuffRobot; // UART connection between FPGA and 3PI
+uart_buff UartBuffDebug; // UART connection between PC and FPGA
+uart_buff UartBuffRobot; // UART connection between FPGA and 3PI
 gpio_state gpioDipSwitches; // GPIO for 4 on-board dip switches
 gpio_state gpioLEDS; // GPIO for 4 on-board LEDS
 gpio_state gpioUSDebug; // GPIO for ultrasound ADC end of conversion interrupt & debug IO
@@ -97,19 +105,20 @@ volatile u32 sysTickCounter = 0;
 
 // Variables - debug
 enum DEBUG_CMD debugCommand = DEBUG_CMD_NONE; // Pending debug command
-char debugEnabled = 0; // Debug mode status
+char debugEnabled = 0x00; // Debug mode status
 char debugRobotCmdSizeReceived = 0; // Debug mode, robot command length received
 
 // Variables - mobile platform
 enum PLATFORM_RESP mpResponse = PLATFORM_RESP_NONE;
-char mpDebugParse = 0; // Currently parsing a debug message
+char mpDebugParse = 0x00; // Currently parsing a debug message
 char mpDebugBuf[MP_DEBUG_BUF_SIZE]; // Platform debug message buffer
 unsigned char mpDebugIndex = 0; // Platform debug mess buffer pointer
 struct POSITION mpCurrentPos; // Current platform position
 
 // Variables - ultrasound array
-char usarrayEnabled = 1; // Ultrasound array scanning status
+char usarrayEnabled = 0x01; // Ultrasound array scanning status
 enum US_OUTPUT usarrayOutputMode = US_OUTPUT_NONE; // Ultrasound array output to debug UART mode
+char usarrayTempTaken = 0x00; // Ultrasound array temperate reading taken
 
 // --------------------------------------------------------------------------------
 
@@ -220,7 +229,7 @@ void ProcessSerialDebug() {
 			switch(data) {
 				case 0x00: {
 					// Disable array
-					usarrayEnabled = 0;
+					usarrayEnabled = 0x00;
 
 					// Output debug info
 					debugPrint("US MODE - DISABLED", 1);
@@ -274,8 +283,8 @@ void ProcessSerialDebug() {
 				// Output debug info
 				if(debugEnabled) {
 					debugPrint("US SENSOR SELECT - ", 0);
-					uart_putchar(&UartBuffDebug, '0' + data);
-					uart_putchar(&UartBuffDebug, '\n');
+					while(uart_putchar(&UartBuffDebug, '0' + data) == -1);
+					while(uart_putchar(&UartBuffDebug, '\n') == -1);
 				}
 			} else {
 				// Output debug info
@@ -309,7 +318,7 @@ void ProcessSerialDebug() {
 				uart_print_int(&UartBuffDebug, data[3], 0);
 				uart_print(&UartBuffDebug, ", FU: ");
 				uart_print_int(&UartBuffDebug, data[4], 0);
-				uart_putchar(&UartBuffDebug, '\n');
+				while(uart_putchar(&UartBuffDebug, '\n') == -1);
 			}
 
 			break;
@@ -372,12 +381,15 @@ void ProcessSerialDebug() {
 			if(get_rx_count(&UartBuffDebug) < debugRobotCmdSizeReceived) return;
 
 			// Transfer command directly to robot
-			while(debugRobotCmdSizeReceived-- > 0) {
+			while(debugRobotCmdSizeReceived > 0) {
 				// Get data
 				char data = uart_getchar(&UartBuffDebug);
 
 				// Put data
 				while(uart_putchar(&UartBuffRobot, data) == -1);
+
+				// Decrement data count
+				debugRobotCmdSizeReceived--;
 			}
 
 			// Output debug info
@@ -385,7 +397,16 @@ void ProcessSerialDebug() {
 
 			break;
 		}
+		case DEBUG_CMD_PING: {
+			// Output debug info
+			debugPrint("PING!", 1);
+
+			break;
+		}
 		case DEBUG_CMD_ROBOT_PASSTHROUGH: {
+			// Output debug info
+			debugPrint("ENTERING 3PI PASSTHROUGH MODE...", 1);
+
 			// No going back once we've done this
 			Passthrough3PI();
 
@@ -410,29 +431,30 @@ void ProcessSerial3PI() {
 		// Special case detect and forward debug messages from the platform to PC
 		if(!mpDebugParse && mpResponse == '#') {
 			// Enter debug parsing mode
-			mpDebugParse = 1;
+			mpDebugParse = 0x01;
 
 			// Reset debug buffer index
 			mpDebugIndex = 0;
 		} else if(mpDebugParse && mpResponse == '\n') {
 			// Exit debug parsing mode
-			mpDebugParse = 0;
+			mpDebugParse = 0x00;
 
 			// Null terminate message
 			mpDebugBuf[mpDebugIndex] = '\0';
-
-			// Check and replace debug tag to show message is from robot
-			if(strncmp((char*) &mpDebugBuf, "DBG: ", 5) == 0) {
-				strncpy((char*) &mpDebugBuf, "3PI: ", 5);
-			}
 
 			// Print message
 			if(debugEnabled) {
 				debugPrint("3PI: ", 0);
 				uart_print(&UartBuffDebug, (char*) &mpDebugBuf);
-				uart_putchar(&UartBuffDebug, '\n');
+				while(uart_putchar(&UartBuffDebug, '\n') == -1);
 			}
-		} else {
+
+			// Attempt to read another byte from UART
+			mpResponse = uart_getchar(&UartBuffRobot);
+		}
+
+		// We may have entered parsing mode
+		if(mpDebugParse) {
 			// Check buffer has space (taking into account null terminator)
 			if(mpDebugIndex < (MP_DEBUG_BUF_SIZE - 1)) {
 				// Store character
@@ -441,6 +463,9 @@ void ProcessSerial3PI() {
 
 			// Attempt to read another byte from UART
 			mpResponse = uart_getchar(&UartBuffRobot);
+		} else {
+			// Haven't entered parsing mode, or we've just exited lets try processing the command
+			break;
 		}
 	}
 
@@ -479,11 +504,11 @@ void ProcessSerial3PI() {
 			if(debugEnabled) {
 				debugPrint("3PI POS UPDATE: ", 0);
 				uart_print_int(&UartBuffDebug, mpCurrentPos.X, 1);
-				uart_putchar(&UartBuffDebug, ',');
+				while(uart_putchar(&UartBuffDebug, ',') == -1);
 				uart_print_int(&UartBuffDebug, mpCurrentPos.Y, 1);
-				uart_putchar(&UartBuffDebug, ',');
+				while(uart_putchar(&UartBuffDebug, ',') == -1);
 				uart_print_int(&UartBuffDebug, mpCurrentPos.Theta, 0);
-				uart_putchar(&UartBuffDebug, '\n');
+				while(uart_putchar(&UartBuffDebug, '\n') == -1);
 			}
 			break;
 		}
@@ -497,8 +522,8 @@ void ProcessSerial3PI() {
 			// Output debug info
 			if(debugEnabled) {
 				debugPrint("3PI BTN PRESS: ", 0);
-				uart_putchar(&UartBuffDebug, '0' + data);
-				uart_putchar(&UartBuffDebug, '\n');
+				while(uart_putchar(&UartBuffDebug, '0' + data) == -1);
+				while(uart_putchar(&UartBuffDebug, '\n') == -1);
 			}
 			break;
 		}
@@ -514,20 +539,31 @@ void ProcessUSArray() {
 		case US_S_ADC_ERROR_REQUEST:
 		case US_S_ADC_ERROR_RESPONSE:
 		{
-			// Output debug info
-			debugPrint("US ARRAY ADC ERROR!!!", 1);
+			// Output debug info - only when array is enabled
+			if(usarrayEnabled) {
+				debugPrint("US ARRAY ADC ERROR!!!", 1);
+			}
 		}
 		case US_S_IDLE:
 		{
 			// Start next scan if array is enabled
 			if(usarrayEnabled) {
-				// Select first sensor (for continuous mode)
-				if(usarray_get_mode() == US_M_COMPLETE) {
-					usarray_set_sensor(0);
-				}
+				// Check if temperature reading taken
+				if(usarrayTempTaken) {
+					// Select first sensor (for continuous mode)
+					if(usarray_get_mode() == US_M_COMPLETE) {
+						usarray_set_sensor(0);
+					}
 
-				// Start first ranging operation
-				usarray_scan();
+					// Start first ranging operation
+					usarray_scan();
+				} else {
+					// Take temperature reading
+					usarray_measure_temp();
+
+					// Set flag
+					usarrayTempTaken = 0x01;
+				}
 			}
 
 			break;
@@ -541,7 +577,7 @@ void ProcessUSArray() {
 			if(usarrayOutputMode != US_OUTPUT_NONE) {
 				// Compute sensor start and end index
 				int startIndex = (usarray_get_mode() == US_M_SINGLE ? usarray_get_sensor() : 0);
-				int endIndex = (usarray_get_mode() == US_M_SINGLE ? usarray_get_sensor() : US_SENSOR_COUNT);
+				int endIndex = (usarray_get_mode() == US_M_SINGLE ? usarray_get_sensor() + 1 : US_SENSOR_COUNT);
 
 				// Output start message
 				uart_print(&UartBuffDebug, "START\n");
@@ -559,9 +595,9 @@ void ProcessUSArray() {
 							for(j = 0; j < US_RX_COUNT; j++) {
 								// Print waveform data
 								uart_print_int(&UartBuffDebug, i, 0);
-								uart_putchar(&UartBuffDebug, ',');
+								while(uart_putchar(&UartBuffDebug, ',') == -1);
 								uart_print_int(&UartBuffDebug, usWaveformData[i][j], 0);
-								uart_putchar(&UartBuffDebug, '\n');
+								while(uart_putchar(&UartBuffDebug, '\n') == -1);
 							}
 						}
 						break;
@@ -571,9 +607,9 @@ void ProcessUSArray() {
 						for(i = startIndex; i < endIndex; i++) {
 							// Print range data
 							uart_print_int(&UartBuffDebug, i, 0);
-							uart_putchar(&UartBuffDebug, ',');
-							uart_print_int(&UartBuffDebug, usRangeReadings[i], 0);
-							uart_putchar(&UartBuffDebug, '\n');
+							while(uart_putchar(&UartBuffDebug, ',') == -1);
+							uart_print_int(&UartBuffDebug, usRangeReadings[i], 1);
+							while(uart_putchar(&UartBuffDebug, '\n') == -1);
 						}
 						break;
 					}
@@ -590,7 +626,8 @@ void ProcessUSArray() {
 		}
 		case US_S_ADC_REQUEST:
 		case US_S_ADC_RESPONSE:
-			// Do nothing - ranging in progress
+		case US_S_TEMP:
+			// Do nothing - ranging or temperature measurement in progress
 			break;
 	}
 }
@@ -629,6 +666,49 @@ void heartBeat() {
 
 // --------------------------------------------------------------------------------
 
+void mpSetDebug(unsigned char state) {
+	// Send debug enable command
+	while(uart_putchar(&UartBuffRobot, PLATFORM_CMD_SET_DEBUG) == -1);
+	while(uart_putchar(&UartBuffRobot, state) == -1);
+}
+
+void mpSetMode(unsigned char mode) {
+	// Send platform set mode command
+	while(uart_putchar(&UartBuffRobot, PLATFORM_CMD_SET_MODE) == -1);
+	while(uart_putchar(&UartBuffRobot, mode) == -1);
+}
+
+void mpSetMotorSpeed(unsigned char dirMaxSpeed, unsigned char left, unsigned char right) {
+	// Send motor speeds (dirMaxSpeed is used as direction in manual mode or max speed in automatic mode where left and right are ignored)
+	while(uart_putchar(&UartBuffRobot, PLATFORM_CMD_SET_MOTOR_SPD) == -1);
+	while(uart_putchar(&UartBuffRobot, dirMaxSpeed) == -1);
+	while(uart_putchar(&UartBuffRobot, left) == -1);
+	while(uart_putchar(&UartBuffRobot, right) == -1);
+}
+
+void mpSetPos(short X, short Y, short Theta) {
+	// Send set position command
+	while(uart_putchar(&UartBuffRobot, PLATFORM_CMD_SET_POS) == -1);
+
+	// Send data
+	unsigned short data[3] = {X, Y, Theta};
+	int i;
+	unsigned char* dataPtr = (unsigned char*) &data;
+	for(i = 0; i < 6; i++) while(uart_putchar(&UartBuffRobot, *dataPtr++) == -1);
+}
+
+void mpGetPos() {
+	// Send get position command
+	while(uart_putchar(&UartBuffRobot, PLATFORM_CMD_GET_POS) == -1);
+}
+
+void mpBeep() {
+	// Send beep command
+	while(uart_putchar(&UartBuffRobot, PLATFORM_CMD_BEEP) == -1);
+}
+
+// --------------------------------------------------------------------------------
+
 void InterruptHandler_Timer_Sys(void *CallbackRef) {
 	// Increment system tick counter
 	sysTickCounter++;
@@ -641,6 +721,6 @@ void debugPrint(char* str, char newLine) {
 	if(debugEnabled) {
 		uart_print(&UartBuffDebug, "#DBG: ");
 		uart_print(&UartBuffDebug, str);
-		if(newLine) uart_putchar(&UartBuffDebug, '\n');
+		if(newLine) while(uart_putchar(&UartBuffDebug, '\n') == -1);
 	}
 }

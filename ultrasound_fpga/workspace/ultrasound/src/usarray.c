@@ -117,7 +117,7 @@ void InterruptHandler_US_GPIO(void *CallbackRef) {
 	XGpio *InstancePtr = (XGpio *) CallbackRef;
 
 	// Check state
-	if(usState == US_S_ADC_RESPONSE) {
+	if(usState == US_S_ADC_RESPONSE || usState == US_S_TEMP) {
 		// Read control register
 		u32 ControlReg = XSpi_ReadReg(SpiADC.BaseAddr, XSP_CR_OFFSET);
 
@@ -139,40 +139,57 @@ void InterruptHandler_US_GPIO(void *CallbackRef) {
 		unsigned short rx1 = XSpi_ReadReg(SpiADC.BaseAddr, XSP_DRR_OFFSET);
 		unsigned short rx2 = XSpi_ReadReg(SpiADC.BaseAddr, XSP_DRR_OFFSET);
 
-		// Prepare result
-		unsigned short adcResult = (rx2 << 6) | (rx1 >> 2);
+		// If a temperature reading was returned clear the RX FIFO
+		if(usState == US_S_TEMP) {
+			XSpi_WriteReg(SpiADC.BaseAddr, XSP_CR_OFFSET, ControlReg | XSP_CR_RXFIFO_RESET_MASK);
+		}
 
-		// Store sample
-		usWaveformData[usSensorMap[usSensorIndex]][usSampleIndex] = adcResult;
+		// Handle result
+		if(usState == US_S_ADC_RESPONSE) {
+			// Format ADC sample
+			unsigned short adcResult = (rx2 << 7) | (rx1 >> 2);
 
-		// Increment sample index
-		usSampleIndex++;
+			// Store sample
+			usWaveformData[usSensorIndex][usSampleIndex] = adcResult;
 
-		// Check sample index, for sampling complete
-		if(usSampleIndex == US_RX_COUNT) {
-			// Stop sampling timer
-			timer_setstate(&TimerUs, 0);
+			// Increment sample index
+			usSampleIndex++;
 
-			// Check mode
-			if(usMode == US_M_COMPLETE) {
-				// Increment sensor index
-				usSensorIndex++;
+			// Check sample index, for sampling complete
+			if(usSampleIndex == US_RX_COUNT) {
+				// Stop sampling timer
+				timer_setstate(&TimerUs, 0);
 
-				// Check sensor index
-				if(usSensorIndex == US_SENSOR_COUNT) {
+				// Check mode
+				if(usMode == US_M_COMPLETE) {
+					// Increment sensor index
+					usSensorIndex++;
+
+					// Check sensor index
+					if(usSensorIndex == US_SENSOR_COUNT) {
+						// Change state
+						usState = US_S_COMPLETE;
+					} else {
+						// Start next request
+						usarray_scan();
+					}
+				} else {
 					// Change state
 					usState = US_S_COMPLETE;
-				} else {
-					// Start next request
-					usarray_scan();
 				}
 			} else {
 				// Change state
-				usState = US_S_COMPLETE;
+				usState = US_S_ADC_REQUEST;
 			}
 		} else {
+			// Format temperature sample
+			unsigned short adcTempResult = (rx2 << 7) | rx1;
+
+			// Convert and store temperature sample
+			usTemperature = (((int) adcTempResult) * 125 * 10) / 1000;
+
 			// Change state
-			usState = US_S_ADC_REQUEST;
+			usState = US_S_COMPLETE;
 		}
 	} else {
 		// Change state
@@ -220,6 +237,40 @@ enum US_STATE usarray_get_status() {
 	return usState;
 }
 
+short usarray_get_temperature() {
+	// Return temperature
+	return usTemperature;
+}
+
+void usarray_measure_temp() {
+	// Change state
+	usState = US_S_TEMP;
+
+	// Compute conversion byte, request a temperature conversion and single channel conversion to be ignored
+	unsigned char adcConversionByte = 0xf9;
+
+	// Set slave select bit in hardware
+	XSpi_SetSlaveSelectReg(&SpiADC, SpiADC.SlaveSelectReg);
+
+	// Read control register
+	u32 ControlReg = XSpi_ReadReg(SpiADC.BaseAddr, XSP_CR_OFFSET);
+
+	// Mask off transmit inhibit bit
+	ControlReg &= ~XSP_CR_TRANS_INHIBIT_MASK;
+
+	// Load single byte into TX FIFO
+	XSpi_WriteReg(SpiADC.BaseAddr, XSP_DTR_OFFSET, adcConversionByte);
+
+	// Start transfer by no longer inhibiting transmitter
+	XSpi_WriteReg(SpiADC.BaseAddr, XSP_CR_OFFSET, ControlReg);
+
+	// Inhibit transmitter
+	XSpi_WriteReg(SpiADC.BaseAddr, XSP_CR_OFFSET, ControlReg | XSP_CR_TRANS_INHIBIT_MASK);
+
+	// Clear RX FIFO
+	XSpi_WriteReg(SpiADC.BaseAddr, XSP_CR_OFFSET, ControlReg | XSP_CR_RXFIFO_RESET_MASK);
+}
+
 void usarray_scan() {
 	// Change state
 	usState = US_S_ADC_REQUEST;
@@ -239,12 +290,8 @@ void usarray_update_ranges() {
 	unsigned int speedOfSound = (3313000 + 606 * usTemperature) / 10000; //mm/uS expressed in thousandths
 
 	// Compute sensor start and end indexes based on mode
-	unsigned char usSensorStartIndex = 0;
-	unsigned char usSensorEndIndex = US_SENSOR_COUNT;
-	if(usMode == US_M_SINGLE) {
-		usSensorStartIndex = usSensorIndex;
-		usSensorEndIndex = usSensorIndex + 1;
-	}
+	unsigned char usSensorStartIndex = (usMode == US_M_SINGLE ? usSensorIndex : 0);
+	unsigned char usSensorEndIndex = (usMode == US_M_SINGLE ? usSensorIndex + 1: US_SENSOR_COUNT);
 
 	// Update range readings for each sensor
 	int iSensor;

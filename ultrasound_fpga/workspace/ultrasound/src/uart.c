@@ -2,7 +2,7 @@
 
 #include <stdlib.h>
 
-int init_uart_buffers(int deviceID, volatile uart_buff *uart_buf) {
+int init_uart_buffers(int deviceID, uart_buff *uart_buf) {
 	// Init UART
 	if(XUartLite_Initialize((XUartLite*) &(uart_buf->uart), deviceID) != XST_SUCCESS) return XST_FAILURE;
 
@@ -70,7 +70,7 @@ void InterruptHandler_UART(void *CallbackRef) {
 	}
 }
 
-int uart_getchar(volatile uart_buff *buf) {
+int uart_getchar(uart_buff *buf) {
 	unsigned char c;
 
 	// Check count
@@ -89,7 +89,7 @@ int uart_getchar(volatile uart_buff *buf) {
 	return (int) c;
 }
 
-int uart_putchar(volatile uart_buff *buf, char c) {
+int uart_putchar(uart_buff *buf, char c) {
 	// Check count
 	if(buf->countTX < buf->sizeTX) {
 		buf->bufferTX[buf->indexTXWrite] = c;
@@ -107,45 +107,48 @@ int uart_putchar(volatile uart_buff *buf, char c) {
 	// Send first byte if TX FIFO empty - interrupt handler will do the rest :-)
 	if(XUartLite_GetStatusReg(buf->uart.RegBaseAddress) & XUL_SR_TX_FIFO_EMPTY) {
 		// Disable interrupts
-		XUartLite_DisableIntr(buf->uart.RegBaseAddress);
+		//XUartLite_DisableIntr(buf->uart.RegBaseAddress);
 
 		// Bit naughty, call interrupt handler to send first byte
 		InterruptHandler_UART((void*) buf);
 
 		// Enable interrupts
-		XUartLite_EnableIntr(buf->uart.RegBaseAddress);
+		//XUartLite_EnableIntr(buf->uart.RegBaseAddress);
 	}
 
 	// Yey!
 	return 1;
 }
 
-int get_tx_count(volatile uart_buff *buf) {
+int get_tx_count(uart_buff *buf) {
 	// Return TX buffer byte count
 	return buf->countTX;
 }
 
-int get_rx_count(volatile uart_buff *buf) {
+int get_rx_count(uart_buff *buf) {
 	// Return RX buffer byte count
 	return buf->countRX;
 }
 
-int uart_print(volatile uart_buff *buf, char* str) {
+int uart_print(uart_buff *buf, char* str) {
 	// Send characters until null terminator reached
-	do {
+	while (*str != '\0') {
 		// Print character, retying on buffer full
 		while(uart_putchar(buf, *str) == -1);
-	} while (*++str != '\0');
+
+		// Increment pointer
+		str++;
+	}
 
 	// Yey!
 	return 1;
 }
 
-int uart_print_int(volatile uart_buff *buf, int val, unsigned char isSigned) {
+int uart_print_int(uart_buff *buf, int val, unsigned char isSigned) {
     // Handle sign
 	if(val < 0 && isSigned) {
 	    // Output sign
-	    uart_putchar(buf, '-');
+	    while(uart_putchar(buf, '-') == -1);
 
 	    // Remove sign
 	    val = -val;
@@ -154,11 +157,11 @@ int uart_print_int(volatile uart_buff *buf, int val, unsigned char isSigned) {
     // Handle zero
     if(val == 0) {
         // Output digit
-    	uart_putchar(buf, '0');
+    	while(uart_putchar(buf, '0') == -1);
     } else {
         // Generate string
         char str[12]; // Allocate enough memory for max integer length and null terminator
-        char *ptr = &str[12]; // Setup pointer at end of string
+        char *ptr = &str[11]; // Setup pointer at end of string
         *ptr = '\0'; // Null terminate string
 	    while(val > 0) {
 		    // Generate character

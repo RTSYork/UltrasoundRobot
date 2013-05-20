@@ -14,13 +14,14 @@ enum US_STATE {
 	US_S_ADC_RESPONSE, // ADC conversion result needs to be fetched
 	US_S_COMPLETE, // Scan complete
 	US_S_ADC_ERROR_REQUEST, // ADC error has occurred, EOC flag not set before next conversion trigger time
-	US_S_ADC_ERROR_RESPONSE // ADC error has occurred, EOC flag has occurred when not expected
+	US_S_ADC_ERROR_RESPONSE, // ADC error has occurred, EOC flag has occurred when not expected
+	US_S_TEMP // Temperature reading in progress
 };
 
 #define US_SENSOR_COUNT 10 // Number of sensors installed on platform
 #define US_SENSOR_MAP {9, 10, 11, 1, 2, 3, 4, 5, 6, 8} //Map sensor positions to sensor addresses
-#define US_SAMPLE_RATE 35000 //80000 // Hz
-#define US_RX_COUNT 5000 // Number of waveform samples to take at US_SAMPLE_RATE in a single ranging operation
+#define US_SAMPLE_RATE 10000 //80000 // Hz
+#define US_RX_COUNT 100 // Number of waveform samples to take at US_SAMPLE_RATE in a single ranging operation
 #define US_TX_COUNT 8 // Cycles of 40Khz ultrasound to transmit
 
 #define USADCPrecision 10 // Bits
@@ -46,6 +47,9 @@ void usarray_set_triggers(unsigned short changever, unsigned short nearLower, un
 
 enum US_STATE usarray_get_status();
 
+short usarray_get_temperature();
+
+void usarray_measure_temp();
 void usarray_scan();
 void usarray_update_ranges();
 void usarray_reset();
