@@ -73,7 +73,7 @@ void main(void) {
 	        //Send result
 		unsigned short i;
 	        serial_printf("START\n");
-	        for(i = 0; i < DATA_SIZE; i++) serial_printf("%i\n", samples[i]);
+	        for(i = 0; i < DATA_SIZE; i++) serial_printf("0,%i\n", samples[i]);
 	        serial_printf("END\n");
 
 		//Wait a while
