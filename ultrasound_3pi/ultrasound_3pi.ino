@@ -148,7 +148,7 @@ unsigned char boolDebugEnabled = 0;
 
 void setup() {
   // Init serial
-  Serial.begin(57600);
+  Serial.begin(115200);
 
   // Send welcome message
   Serial.print("#3PI...");
@@ -287,12 +287,14 @@ void processSerial() {
     }
   case CMD_SET_MOTOR_SPD: 
     {
+      //  Wait for data
+      while(Serial.available() < 3) return;
+      
       // Set motor speed in manual mode or maximum speed in automatic mode
       switch(mode) {
       case MODE_MANUAL:
         {
           // Set motor speed
-          while(Serial.available() < 3) return;
           motorDir = (unsigned char) Serial.read();
           motorSpeedLeft = (unsigned char) Serial.read();
           motorSpeedRight = (unsigned char) Serial.read();
@@ -313,8 +315,9 @@ void processSerial() {
         }
       case MODE_AUTOMATIC:
         {
-          while(Serial.available() < 1) return;
           motMaxSpeed = (unsigned char) Serial.read();
+          Serial.read(); // Read additional bytes we dont care about
+          Serial.read();
 
           // Output debug info
           if(boolDebugEnabled) {
@@ -330,9 +333,14 @@ void processSerial() {
     {
       // Set target position
       while(Serial.available() < 6) return;
-      motTargetPos.X = (int) (((unsigned int) Serial.read() << 8) | (unsigned int) Serial.read());
-      motTargetPos.Y = (int) (((unsigned int) Serial.read() << 8) | (unsigned int) Serial.read());
-      motTargetPos.Theta = degreesToRadians((int) (((unsigned int) Serial.read() << 8) | (unsigned int) Serial.read()));
+      int data[3];
+      unsigned char* dataPtr = (unsigned char*) &data;
+      for(unsigned char i = 0; i < 6; i++) *dataPtr++ = Serial.read();
+      
+      // Store data
+      motTargetPos.X = data[0];
+      motTargetPos.Y = data[1];
+      motTargetPos.Theta = degreesToRadians(data[2]);
 
       // Limit theta
       while(motTargetPos.Theta > PI) motTargetPos.Theta -= (2 * PI);
@@ -645,14 +653,10 @@ unsigned long readISRULong(volatile unsigned long* ptr) {
 }
 
 void outputPosition() {
-  int X = odoCurrentPos.X;
-  int Y = odoCurrentPos.Y;
-  int theta = radiansToDegrees(odoCurrentPos.Theta);
-  
+  int data[3] = {odoCurrentPos.X, odoCurrentPos.Y, radiansToDegrees(odoCurrentPos.Theta)};
+  unsigned char* dataPtr = (unsigned char*) &data;
   Serial.write(RESP_POS);
-  Serial.write((uint8_t*) &X, sizeof(X));
-  Serial.write((uint8_t*) &Y, sizeof(Y));
-  Serial.write((uint8_t*) &theta, sizeof(theta));
+  for(unsigned char i = 0; i < 6; i++) Serial.write(*dataPtr++);
 }
 
 // Print formatted debugging information
