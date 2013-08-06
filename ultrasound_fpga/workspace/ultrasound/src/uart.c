@@ -178,3 +178,11 @@ int uart_print_int(uart_buff *buf, int val, unsigned char isSigned) {
 	// Yey!
 	return 1;
 }
+
+int uart_print_char(uart_buff *buf, char c) {
+	// Send character when buffer not full
+	while(uart_putchar(buf, c) == -1);
+
+	// Yey!
+	return 1;
+}

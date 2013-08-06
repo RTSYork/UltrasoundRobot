@@ -39,4 +39,6 @@ int uart_print(uart_buff *buf, char* str);
 
 int uart_print_int(uart_buff *buf, int val, unsigned char isSigned);
 
+int uart_print_char(uart_buff *buf, char c);
+
 #endif /* UART_H_ */

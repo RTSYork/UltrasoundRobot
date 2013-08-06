@@ -2,9 +2,8 @@
 
 #include "xparameters.h"
 
-#include "xspi.h"
-#include "xgpio.h"
 #include "pulsegen.h"
+#include "us_receiver.h"
 
 #define USVoltageToTriggerLevel(x) (unsigned short) ((((unsigned int) x) * ((1 << USADCPrecision) - 1)) / USADCReference) // Voltage expressed in hundredths
 #define USSampleIndexToTime(x) (unsigned short) ((((1000000 * 10) / US_SAMPLE_RATE) * (((unsigned int) x) + 1)) / 10) // Time expressed in uS
@@ -20,187 +19,34 @@ volatile unsigned short usSampleIndex = 0; // Sample index, incremented once per
 volatile unsigned short usWaveformData[US_SENSOR_COUNT][US_RX_COUNT]; // Raw waveform data - stored as ADC results
 volatile signed short usRangeReadings[US_SENSOR_COUNT]; // Latest range readings - stored as sample indexes
 
-volatile unsigned short usTriggerChangeIndex = USTimeToSampleIndex(1200); // Trigger changeover time
-volatile unsigned short usTriggerNearUpper = USVoltageToTriggerLevel(140); // Upper trigger level
-volatile unsigned short usTriggerNearLower = USVoltageToTriggerLevel(164); // Lower trigger level
-volatile unsigned short usTriggerFarUpper = USVoltageToTriggerLevel(146); // Upper trigger level
-volatile unsigned short usTriggerFarLower = USVoltageToTriggerLevel(158); // Lower trigger level
+volatile unsigned short usTriggerChangeIndex = USTimeToSampleIndex(TRIGGER_NEAR_FAR_CHANGE); // Trigger changeover time
+volatile unsigned short usTriggerNearUpper = USVoltageToTriggerLevel(TRIGGER_BASE + TRIGGER_OFFSET_NEAR); // Upper trigger level
+volatile unsigned short usTriggerNearLower = USVoltageToTriggerLevel(TRIGGER_BASE - TRIGGER_OFFSET_NEAR); // Lower trigger level
+volatile unsigned short usTriggerFarUpper = USVoltageToTriggerLevel(TRIGGER_BASE + TRIGGER_OFFSET_FAR); // Upper trigger level
+volatile unsigned short usTriggerFarLower = USVoltageToTriggerLevel(TRIGGER_BASE - TRIGGER_OFFSET_FAR); // Lower trigger level
 
 volatile signed short usTemperature = 210; // Temperature in degrees C, expressed in tenths
 
-XTmrCtr TimerUs; // Timer for ADC sampling
-XSpi SpiADC; // SPI interface for ADC
 
 int init_usarray() {
-	// Lookup SPI config
-	XSpi_Config *ConfigPtr = XSpi_LookupConfig(XPAR_AXI_SPI_US_DEVICE_ID);
-	if(ConfigPtr == NULL) return XST_DEVICE_NOT_FOUND;
-
-	// Init SPI
-	if(XSpi_CfgInitialize(&SpiADC, ConfigPtr, ConfigPtr->BaseAddress) != XST_SUCCESS) return XST_FAILURE;
-
-	// Self test SPI
-	if(XSpi_SelfTest(&SpiADC) != XST_SUCCESS) return XST_FAILURE;
-
-	// Enable master mode with automatic slave selection
-	if(XSpi_SetOptions(&SpiADC, XSP_MASTER_OPTION) != XST_SUCCESS) return XST_FAILURE;
-
-	// Select slave config - we'll always be talking to the ADC
-	if(XSpi_SetSlaveSelect(&SpiADC, 0x01) != XST_SUCCESS) return XST_FAILURE;
-
-	// Start SPI device
-	XSpi_Start(&SpiADC);
-
-	// Disable interrupts for polled mode
-	XSpi_IntrGlobalDisable(&SpiADC);
-
-	// Init timer
-	if(init_timer(XPAR_AXI_TIMER_US_DEVICE_ID, &TimerUs, XPAR_AXI_TIMER_US_CLOCK_FREQ_HZ, US_SAMPLE_RATE, (XTmrCtr_Handler) &InterruptHandler_US_Timer) != XST_SUCCESS) return XST_FAILURE;
-
-	// Setup ADC by writing to setup register
-	unsigned char adcSetupByte = 0x64; // Set ADC to use its internal clock for sampling and conversions, use external single ended reference
-	XSpi_Transfer(&SpiADC, (u8*) &adcSetupByte, NULL, 1);
-
 	// Reset all ranges
 	int i;
 	for(i = 0; i < US_SENSOR_COUNT; i++) usRangeReadings[i] = -1;
+	//print("#Sending ADC init...\n");
+	// Setup ADC by writing to setup register (0x64)
+	// Set to use internal clock for sampling and conversions, use external single ended reference
+	sendUSInit();
+	//print("#Reading ADC init response...\n");
+	u8 status;
+	u8 type;
+	u32 data;
+	readUSData(&status, &type, &data);
+	//print("#ADC init done.\n");
 
-	// Yey!
-	return XST_SUCCESS;
-}
-
-void InterruptHandler_US_Timer(void *CallbackRef) {
-	// Grab timer instance
-	XTmrCtr *InstancePtr = (XTmrCtr *) CallbackRef;
-
-	// Process interrupt
-	if(usState == US_S_ADC_REQUEST) {
-		// Change state
-		usState = US_S_ADC_RESPONSE;
-
-		// Compute conversion byte using channel
-		unsigned char adcConversionByte = 0x86 | ((usSensorMap[usSensorIndex] & 0x0f) << 3);
-
-		// Set slave select bit in hardware
-		XSpi_SetSlaveSelectReg(&SpiADC, SpiADC.SlaveSelectReg);
-
-		// Read control register
-		u32 ControlReg = XSpi_ReadReg(SpiADC.BaseAddr, XSP_CR_OFFSET);
-
-		// Mask off transmit inhibit bit
-		ControlReg &= ~XSP_CR_TRANS_INHIBIT_MASK;
-
-		// Load single byte into TX FIFO
-		XSpi_WriteReg(SpiADC.BaseAddr, XSP_DTR_OFFSET, adcConversionByte);
-
-		// Start transfer by no longer inhibiting transmitter
-		XSpi_WriteReg(SpiADC.BaseAddr, XSP_CR_OFFSET, ControlReg);
-
-		// Inhibit transmitter
-		XSpi_WriteReg(SpiADC.BaseAddr, XSP_CR_OFFSET, ControlReg | XSP_CR_TRANS_INHIBIT_MASK);
-
-		// Clear RX FIFO
-		XSpi_WriteReg(SpiADC.BaseAddr, XSP_CR_OFFSET, ControlReg | XSP_CR_RXFIFO_RESET_MASK);
-	} else {
-		// Change state
-		if(usState != US_S_ADC_ERROR_RESPONSE) {
-			usState = US_S_ADC_ERROR_REQUEST;
-		}
-
-		// Stop sampling timer
-		timer_setstate(InstancePtr, 0);
-	}
-}
-
-void InterruptHandler_US_GPIO(void *CallbackRef) {
-	// Grab GPIO instance
-	XGpio *InstancePtr = (XGpio *) CallbackRef;
-
-	// Check state
-	if(usState == US_S_ADC_RESPONSE || usState == US_S_TEMP) {
-		// Read control register
-		u32 ControlReg = XSpi_ReadReg(SpiADC.BaseAddr, XSP_CR_OFFSET);
-
-		// Load two nulls into TX FIFO
-		XSpi_WriteReg(SpiADC.BaseAddr, XSP_DTR_OFFSET, 0);
-		XSpi_WriteReg(SpiADC.BaseAddr, XSP_DTR_OFFSET, 0);
-
-		// Start transfer by no longer inhibiting transmitter
-		XSpi_WriteReg(SpiADC.BaseAddr, XSP_CR_OFFSET, ControlReg);
-
-		// Wait for transfer to complete
-		while((XSpi_ReadReg(SpiADC.BaseAddr, XSP_SR_OFFSET) & XSP_SR_TX_EMPTY_MASK) == 0);
-
-		// Inhibit transmitter
-		ControlReg |= XSP_CR_TRANS_INHIBIT_MASK;
-		XSpi_WriteReg(SpiADC.BaseAddr, XSP_CR_OFFSET, ControlReg);
-
-		// Read RX FIFO
-		unsigned short rx1 = XSpi_ReadReg(SpiADC.BaseAddr, XSP_DRR_OFFSET);
-		unsigned short rx2 = XSpi_ReadReg(SpiADC.BaseAddr, XSP_DRR_OFFSET);
-
-		// If a temperature reading was returned clear the RX FIFO
-		if(usState == US_S_TEMP) {
-			XSpi_WriteReg(SpiADC.BaseAddr, XSP_CR_OFFSET, ControlReg | XSP_CR_RXFIFO_RESET_MASK);
-		}
-
-		// Handle result
-		if(usState == US_S_ADC_RESPONSE) {
-			// Format ADC sample
-			unsigned short adcResult = (rx2 << 7) | (rx1 >> 2);
-
-			// Store sample
-			usWaveformData[usSensorIndex][usSampleIndex] = adcResult;
-
-			// Increment sample index
-			usSampleIndex++;
-
-			// Check sample index, for sampling complete
-			if(usSampleIndex == US_RX_COUNT) {
-				// Stop sampling timer
-				timer_setstate(&TimerUs, 0);
-
-				// Check mode
-				if(usMode == US_M_COMPLETE) {
-					// Increment sensor index
-					usSensorIndex++;
-
-					// Check sensor index
-					if(usSensorIndex == US_SENSOR_COUNT) {
-						// Change state
-						usState = US_S_COMPLETE;
-					} else {
-						// Start next request
-						usarray_scan();
-					}
-				} else {
-					// Change state
-					usState = US_S_COMPLETE;
-				}
-			} else {
-				// Change state
-				usState = US_S_ADC_REQUEST;
-			}
-		} else {
-			// Format temperature sample
-			unsigned short adcTempResult = (rx2 << 7) | rx1;
-
-			// Convert and store temperature sample
-			usTemperature = (((int) adcTempResult) * 125 * 10) / 1000;
-
-			// Change state
-			usState = US_S_COMPLETE;
-		}
-	} else {
-		// Change state
-		if(usState != US_S_ADC_ERROR_REQUEST) {
-			usState = US_S_ADC_ERROR_RESPONSE;
-		}
-	}
-
-	// Clear interrupt
-	u32 GPIO_Reg = XGpio_ReadReg(InstancePtr->BaseAddress, XGPIO_ISR_OFFSET);
-	XGpio_WriteReg(InstancePtr->BaseAddress, XGPIO_ISR_OFFSET, GPIO_Reg & 0x01);
+	if (status == US_STATUS_OK && type == US_RESP_NONE)
+		return XST_SUCCESS;
+	else
+		return XST_FAILURE;
 }
 
 void usarray_set_mode(enum US_MODE newMode) {
@@ -246,29 +92,20 @@ void usarray_measure_temp() {
 	// Change state
 	usState = US_S_TEMP;
 
-	// Compute conversion byte, request a temperature conversion and single channel conversion to be ignored
-	unsigned char adcConversionByte = 0xf9;
+	//print("##Temperature measure sending command...\n");
+	// Compute conversion byte, request temperature conversion and ignore single channel conversion (0xf9)
+	sendUSTempRequest();
+	//print("##Temperature measure reading data...\n");
+	// Read temperature back (blocking)
+	u8 status;
+	u8 type;
+	u32 adcTempResult;
+	readUSData(&status, &type, &adcTempResult);
 
-	// Set slave select bit in hardware
-	XSpi_SetSlaveSelectReg(&SpiADC, SpiADC.SlaveSelectReg);
-
-	// Read control register
-	u32 ControlReg = XSpi_ReadReg(SpiADC.BaseAddr, XSP_CR_OFFSET);
-
-	// Mask off transmit inhibit bit
-	ControlReg &= ~XSP_CR_TRANS_INHIBIT_MASK;
-
-	// Load single byte into TX FIFO
-	XSpi_WriteReg(SpiADC.BaseAddr, XSP_DTR_OFFSET, adcConversionByte);
-
-	// Start transfer by no longer inhibiting transmitter
-	XSpi_WriteReg(SpiADC.BaseAddr, XSP_CR_OFFSET, ControlReg);
-
-	// Inhibit transmitter
-	XSpi_WriteReg(SpiADC.BaseAddr, XSP_CR_OFFSET, ControlReg | XSP_CR_TRANS_INHIBIT_MASK);
-
-	// Clear RX FIFO
-	XSpi_WriteReg(SpiADC.BaseAddr, XSP_CR_OFFSET, ControlReg | XSP_CR_RXFIFO_RESET_MASK);
+	// This might not be right? Doing (temp*1.25) seems too high, but might just be warm chip.
+	usTemperature = (((int) adcTempResult) * 125 * 10) / 1000;
+	//xil_printf("##Temperature measure done: %d (%d)\n", adcTempResult, adcTempResult, usTemperature);
+	usState = US_S_COMPLETE;
 }
 
 void usarray_scan() {
@@ -278,11 +115,32 @@ void usarray_scan() {
 	// Reset sample index
 	usSampleIndex = 0;
 
-	// Start sampling timer
-	timer_setstate(&TimerUs, 1);
+	int minSensor = (usMode == US_M_SINGLE) ? usSensorIndex : 0;
+	int maxSensor = (usMode == US_M_SINGLE) ? usSensorIndex + 1 : US_SENSOR_COUNT;
+	int sensor;
+	int sample;
 
-	// Generate ultrasound pulse
-	pulseGen_GeneratePulse(XPAR_AXI_PULSEGEN_US_BASEADDR, 1, usSensorMap[usSensorIndex], US_TX_COUNT);
+	// Iterate through sensors
+	for (sensor = minSensor; sensor < maxSensor; sensor++) {
+		//xil_printf("###Scanning sensor %d...", sensor);
+		// Generate ultrasound pulse
+		pulseGen_GeneratePulse(XPAR_AXI_PULSEGEN_US_BASEADDR, 1, usSensorMap[sensor], US_TX_COUNT);
+		// Start sampling at 80kHz
+		sendUSSampleRequest(usSensorMap[sensor], US_RX_COUNT, 1250);
+
+		// Read all sample data
+		for (sample = 0; sample < US_RX_COUNT; sample++) {
+			u8 status;
+			u8 type;
+			u32 adcResult;
+			readUSData(&status, &type, &adcResult);
+
+			usWaveformData[sensor][sample] = adcResult;
+		}
+		//print("done\n");
+	}
+
+	usState = US_S_COMPLETE;
 }
 
 void usarray_update_ranges() {
@@ -292,6 +150,10 @@ void usarray_update_ranges() {
 	// Compute sensor start and end indexes based on mode
 	unsigned char usSensorStartIndex = (usMode == US_M_SINGLE ? usSensorIndex : 0);
 	unsigned char usSensorEndIndex = (usMode == US_M_SINGLE ? usSensorIndex + 1: US_SENSOR_COUNT);
+
+	//xil_printf("\nSample time: %d\nChange Index: %d\nLower: %d\nUpper: %d, Data: %d",
+	//				USSampleIndexToTime(100), usTriggerChangeIndex,
+	//				usTriggerFarLower, usTriggerFarUpper, usWaveformData[9][100]);
 
 	// Update range readings for each sensor
 	int iSensor;
@@ -305,7 +167,8 @@ void usarray_update_ranges() {
 		// Example each sample
 		for(iSample = 0; iSample < US_RX_COUNT; iSample++) {
 			// Work out trigger levels for sample
-			if(USSampleIndexToTime(iSample) <= usTriggerChangeIndex) {
+			//if(USSampleIndexToTime(iSample) <= usTriggerChangeIndex) {
+			if(iSample <= usTriggerChangeIndex) {
 				triggerUpper = usTriggerNearUpper;
 				triggerLower = usTriggerNearLower;
 			} else {
@@ -316,8 +179,13 @@ void usarray_update_ranges() {
 			// Check sample against trigger levels
 			if(usWaveformData[iSensor][iSample] <= triggerLower || usWaveformData[iSensor][iSample] >= triggerUpper) {
 				// Update range reading - converting distance from thousandths of mm to mm and halving to retrieve one way distance
-				usRangeReadings[iSensor] = (((unsigned int) USSampleIndexToTime(iSample)) * speedOfSound) / (1000 * 2);
-
+				//usRangeReadings[iSensor] = (((unsigned int) USSampleIndexToTime(iSample)) * speedOfSound) / (1000 * 2);
+				if (iSensor == 0 || iSensor == 5)
+					// Add extra 30mm for adapter on sensors 0 and 5
+					usRangeReadings[iSensor] = ((((unsigned int) USSampleIndexToTime(iSample)) * speedOfSound) / (1000 * 2)) + 10;
+				else
+					usRangeReadings[iSensor] = ((((unsigned int) USSampleIndexToTime(iSample)) * speedOfSound) / (1000 * 2)) - 20;
+				//xil_printf("\nSensor: %d, Sample: %d\n", iSensor, iSample);
 				// Done
 				break;
 			}

@@ -33,3 +33,14 @@ int interrupt_ctrl_setup(XIntc *int_ctrl, u8 interruptID, XInterruptHandler inte
 	// Yey!
 	return XST_SUCCESS;
 }
+
+int interrupt_fast_ctrl_setup(XIntc *int_ctrl, u8 interruptID, XFastInterruptHandler interruptHandler) {
+	// Connect interrupt handler
+	if(XIntc_ConnectFastHandler(int_ctrl, interruptID, interruptHandler) != XST_SUCCESS) return XST_FAILURE;
+
+	// Enable interrupt
+	XIntc_Enable(int_ctrl, interruptID);
+
+	// Yey!
+	return XST_SUCCESS;
+}

@@ -8,6 +8,7 @@
 #include "gpio.h"
 #include "timer.h"
 #include "usarray.h"
+#include "us_receiver.h"
 
 // --------------------------------------------------------------------------------
 
@@ -74,6 +75,7 @@ void ProcessSerialDebug();
 void ProcessSerial3PI();
 void ProcessUSArray();
 void Passthrough3PI();
+void TestFSL();
 
 // Helpers to issue commands to mobile platform
 void mpSetDebug(unsigned char state);
@@ -136,7 +138,6 @@ int main() {
 	// Init GPIO
 	if(init_gpio(XPAR_DIP_SWITCHES_4BITS_DEVICE_ID, 0x0F, 0x00, &gpioDipSwitches) != XST_SUCCESS) return XST_FAILURE;
 	if(init_gpio(XPAR_LEDS_4BITS_DEVICE_ID, 0x00, 0x00, &gpioLEDS) != XST_SUCCESS) return XST_FAILURE;
-	if(init_gpio(XPAR_AXI_GPIO_US_DEVICE_ID, 0x01, 0x01, &gpioUSDebug) != XST_SUCCESS) return XST_FAILURE;
 
 	// Init timer
 	if(init_timer(XPAR_AXI_TIMER_0_DEVICE_ID, &TimerSys, XPAR_AXI_TIMER_0_CLOCK_FREQ_HZ, 1000, (XTmrCtr_Handler) &InterruptHandler_Timer_Sys) != XST_SUCCESS) return XST_FAILURE;
@@ -155,15 +156,14 @@ int main() {
 	if(interrupt_ctrl_setup(&InterruptController, XPAR_MICROBLAZE_0_INTC_USB_UART_INTERRUPT_INTR, InterruptHandler_UART, (void *) &UartBuffDebug) != XST_SUCCESS) return XST_SUCCESS;
 	if(interrupt_ctrl_setup(&InterruptController, XPAR_MICROBLAZE_0_INTC_AXI_UARTLITE_3PI_INTERRUPT_INTR, InterruptHandler_UART, (void *) &UartBuffRobot) != XST_SUCCESS) return XST_SUCCESS;
 
-	// Setup interrupts for ultrasound array
-	if(interrupt_ctrl_setup(&InterruptController, XPAR_MICROBLAZE_0_INTC_AXI_TIMER_US_INTERRUPT_INTR, XTmrCtr_InterruptHandler, (void *) &TimerUs) != XST_SUCCESS) return XST_SUCCESS;
-	if(interrupt_ctrl_setup(&InterruptController, XPAR_MICROBLAZE_0_INTC_AXI_GPIO_US_IP2INTC_IRPT_INTR, InterruptHandler_US_GPIO, (void *) &gpioUSDebug) != XST_SUCCESS) return XST_SUCCESS;
-
 	// Set ultrasound mode
 	usarray_set_mode(US_M_COMPLETE);
 
+	// Test us_receiver FSL bus
+	//TestFSL();
+
 	// Startup message - printed via UART routines now UART initialised
-	uart_print(&UartBuffDebug, "Ready!\n");
+	uart_print(&UartBuffDebug, "#Ready!\n");
 
 	// Main loop
 	while(1) {
@@ -171,7 +171,6 @@ int main() {
 		ProcessSerialDebug();
 		ProcessSerial3PI();
 		ProcessUSArray();
-
 		heartBeat();
 	}
 
@@ -219,6 +218,7 @@ void ProcessSerialDebug() {
 			break;
 		}
 		case DEBUG_CMD_SET_US_MODE: {
+
 			// Wait for data
 			if(get_rx_count(&UartBuffDebug) < 1) return;
 
@@ -556,8 +556,10 @@ void ProcessUSArray() {
 					}
 
 					// Start first ranging operation
+					//print("##Scanning\n");
 					usarray_scan();
 				} else {
+					//print("##Temperature\n");
 					// Take temperature reading
 					usarray_measure_temp();
 
@@ -570,6 +572,7 @@ void ProcessUSArray() {
 		}
 		case US_S_COMPLETE:
 		{
+			//print("##Update ranges\n");
 			// Update range array
 			usarray_update_ranges();
 
@@ -580,7 +583,9 @@ void ProcessUSArray() {
 				int endIndex = (usarray_get_mode() == US_M_SINGLE ? usarray_get_sensor() + 1 : US_SENSOR_COUNT);
 
 				// Output start message
-				uart_print(&UartBuffDebug, "START\n");
+				//uart_print(&UartBuffDebug, "START\n");
+				uart_print_char(&UartBuffDebug, 0xFF);
+				uart_print_char(&UartBuffDebug, 0xFF);
 
 				// Output data
 				int i, j;
@@ -594,10 +599,15 @@ void ProcessUSArray() {
 						for(i = startIndex; i < endIndex; i++) {
 							for(j = 0; j < US_RX_COUNT; j++) {
 								// Print waveform data
-								uart_print_int(&UartBuffDebug, i, 0);
-								while(uart_putchar(&UartBuffDebug, ',') == -1);
-								uart_print_int(&UartBuffDebug, usWaveformData[i][j], 0);
-								while(uart_putchar(&UartBuffDebug, '\n') == -1);
+								//uart_print_int(&UartBuffDebug, i, 0);
+								//while(uart_putchar(&UartBuffDebug, ',') == -1);
+								//uart_print_int(&UartBuffDebug, usWaveformData[i][j], 0);
+								//while(uart_putchar(&UartBuffDebug, '\n') == -1);
+
+								char first = ((usWaveformData[i][j] & 0xF00) >> 4) | (i & 0x0F);
+								char second = usWaveformData[i][j] & 0xFF;
+								uart_print_char(&UartBuffDebug, first);
+								uart_print_char(&UartBuffDebug, second);
 							}
 						}
 						break;
@@ -606,17 +616,24 @@ void ProcessUSArray() {
 						// Output data for each required sensor
 						for(i = startIndex; i < endIndex; i++) {
 							// Print range data
-							uart_print_int(&UartBuffDebug, i, 0);
-							while(uart_putchar(&UartBuffDebug, ',') == -1);
-							uart_print_int(&UartBuffDebug, usRangeReadings[i], 1);
-							while(uart_putchar(&UartBuffDebug, '\n') == -1);
+							//uart_print_int(&UartBuffDebug, i, 0);
+							//while(uart_putchar(&UartBuffDebug, ',') == -1);
+							//uart_print_int(&UartBuffDebug, usRangeReadings[i], 1);
+							//while(uart_putchar(&UartBuffDebug, '\n') == -1);
+
+							char first = ((usRangeReadings[i] & 0xF00) >> 4) | (i & 0x0F);
+							char second = usRangeReadings[i] & 0xFF;
+							uart_print_char(&UartBuffDebug, first);
+							uart_print_char(&UartBuffDebug, second);
 						}
 						break;
 					}
 				}
 
 				// Output end message
-				uart_print(&UartBuffDebug, "END\n");
+				//uart_print(&UartBuffDebug, "END\n");
+				uart_print_char(&UartBuffDebug, 0x7F);
+				uart_print_char(&UartBuffDebug, 0xFF);
 			}
 
 			// Get ready for next reading
@@ -633,7 +650,7 @@ void ProcessUSArray() {
 }
 
 void Passthrough3PI() {
-	int c;
+	char c;
 
 	// Forever
 	while(1) {
@@ -648,6 +665,31 @@ void Passthrough3PI() {
 		// Show we're still alive
 		heartBeat();
 	}
+}
+
+// --------------------------------------------------------------------------------
+
+void TestFSL() {
+
+	print("\n##Starting FSL Test...\n");
+
+	u32 output = 0xABCDEF0;
+	u8 status;
+	u8 type;
+	u32 data;
+
+	sendUSEcho(output);
+	xil_printf("#Sent:   0x%07x\n", (unsigned int)output);
+
+	readUSData(&status, &type, &data);
+	xil_printf("#Read:   0x%07x\n", (unsigned int)data);
+	xil_printf("#Status: 0x%01x\n", (unsigned int)status);
+	xil_printf("#Type:   0x%01x\n", (unsigned int)type);
+
+	if (status == US_STATUS_OK && type == US_RESP_ECHO && data == output)
+		print("##FSL Test Passed\n");
+	else
+		print("##FSL Test Failed\n");
 }
 
 // --------------------------------------------------------------------------------
