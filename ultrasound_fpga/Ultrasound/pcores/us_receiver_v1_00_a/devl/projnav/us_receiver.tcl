@@ -1,0 +1,10 @@
+project new C:/Ultrasound/Ultrasound/pcores/us_receiver_v1_00_a/devl/projnav/us_receiver.xise;
+project set family spartan6;
+project set device xc6slx9;
+project set package csg324;
+project set speed -2;
+project set top_level_module_type HDL;
+project set synthesis_tool "XST (VHDL/Verilog)";
+lib_vhdl new us_receiver_v1_00_a;
+xfile add C:/Ultrasound/Ultrasound//pcores/us_receiver_v1_00_a/hdl/verilog/us_receiver.v;
+project close;

@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<wave_config>
+   <wave_state>
+   </wave_state>
+   <db_ref_list>
+      <db_ref path="C:/Ultrasound/Ultrasound/pcores/us_receiver_v1_00_a/devl/projnav/spi_test_isim_beh.wdb" id="1" type="auto">
+         <top_modules>
+            <top_module name="glbl" />
+            <top_module name="spi_test" />
+         </top_modules>
+      </db_ref>
+   </db_ref_list>
+   <WVObjectSize size="23" />
+   <wvobject fp_name="/spi_test/RDY_startSendRead" type="logic" db_ref_id="1">
+      <obj_property name="ElementShortName">RDY_startSendRead</obj_property>
+      <obj_property name="ObjectShortName">RDY_startSendRead</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_test/RDY_startRead" type="logic" db_ref_id="1">
+      <obj_property name="ElementShortName">RDY_startRead</obj_property>
+      <obj_property name="ObjectShortName">RDY_startRead</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_test/readByte" type="array" db_ref_id="1">
+      <obj_property name="ElementShortName">readByte[7:0]</obj_property>
+      <obj_property name="ObjectShortName">readByte[7:0]</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_test/RDY_readByte" type="logic" db_ref_id="1">
+      <obj_property name="ElementShortName">RDY_readByte</obj_property>
+      <obj_property name="ObjectShortName">RDY_readByte</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_test/busy" type="logic" db_ref_id="1">
+      <obj_property name="ElementShortName">busy</obj_property>
+      <obj_property name="ObjectShortName">busy</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_test/sck" type="logic" db_ref_id="1">
+      <obj_property name="ElementShortName">sck</obj_property>
+      <obj_property name="ObjectShortName">sck</obj_property>
+      <obj_property name="UseCustomSignalColor">true</obj_property>
+      <obj_property name="CustomSignalColor">#ffff00</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_test/mosi" type="logic" db_ref_id="1">
+      <obj_property name="ElementShortName">mosi</obj_property>
+      <obj_property name="ObjectShortName">mosi</obj_property>
+      <obj_property name="UseCustomSignalColor">true</obj_property>
+      <obj_property name="CustomSignalColor">#00ffff</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_test/ss" type="logic" db_ref_id="1">
+      <obj_property name="ElementShortName">ss</obj_property>
+      <obj_property name="ObjectShortName">ss</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_test/CLK" type="logic" db_ref_id="1">
+      <obj_property name="ElementShortName">CLK</obj_property>
+      <obj_property name="ObjectShortName">CLK</obj_property>
+      <obj_property name="UseCustomSignalColor">true</obj_property>
+      <obj_property name="CustomSignalColor">#ffff00</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_test/startSendRead_data" type="array" db_ref_id="1">
+      <obj_property name="ElementShortName">startSendRead_data[7:0]</obj_property>
+      <obj_property name="ObjectShortName">startSendRead_data[7:0]</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_test/EN_startSendRead" type="logic" db_ref_id="1">
+      <obj_property name="ElementShortName">EN_startSendRead</obj_property>
+      <obj_property name="ObjectShortName">EN_startSendRead</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_test/EN_startRead" type="logic" db_ref_id="1">
+      <obj_property name="ElementShortName">EN_startRead</obj_property>
+      <obj_property name="ObjectShortName">EN_startRead</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_test/EN_readByte" type="logic" db_ref_id="1">
+      <obj_property name="ElementShortName">EN_readByte</obj_property>
+      <obj_property name="ObjectShortName">EN_readByte</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_test/miso_val" type="logic" db_ref_id="1">
+      <obj_property name="ElementShortName">miso_val</obj_property>
+      <obj_property name="ObjectShortName">miso_val</obj_property>
+   </wvobject>
+   <wvobject fp_name="divider16" type="divider">
+      <obj_property name="label">Internal</obj_property>
+      <obj_property name="DisplayName">label</obj_property>
+      <obj_property name="BkColor">128 128 255</obj_property>
+      <obj_property name="TextColor">230 230 230</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_test/uut/bitCount" type="array" db_ref_id="1">
+      <obj_property name="ElementShortName">bitCount[3:0]</obj_property>
+      <obj_property name="ObjectShortName">bitCount[3:0]</obj_property>
+      <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_test/uut/clkDivide" type="array" db_ref_id="1">
+      <obj_property name="ElementShortName">clkDivide[3:0]</obj_property>
+      <obj_property name="ObjectShortName">clkDivide[3:0]</obj_property>
+      <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_test/uut/dataOut" type="array" db_ref_id="1">
+      <obj_property name="ElementShortName">dataOut[7:0]</obj_property>
+      <obj_property name="ObjectShortName">dataOut[7:0]</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_test/uut/dataIn" type="array" db_ref_id="1">
+      <obj_property name="ElementShortName">dataIn[7:0]</obj_property>
+      <obj_property name="ObjectShortName">dataIn[7:0]</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_test/uut/transferDone" type="logic" db_ref_id="1">
+      <obj_property name="ElementShortName">transferDone</obj_property>
+      <obj_property name="ObjectShortName">transferDone</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_test/uut/working" type="logic" db_ref_id="1">
+      <obj_property name="ElementShortName">working</obj_property>
+      <obj_property name="ObjectShortName">working</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_test/uut/waitForSS" type="logic" db_ref_id="1">
+      <obj_property name="ElementShortName">waitForSS</obj_property>
+      <obj_property name="ObjectShortName">waitForSS</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_test/uut/ssTimer" type="array" db_ref_id="1">
+      <obj_property name="ElementShortName">ssTimer[2:0]</obj_property>
+      <obj_property name="ObjectShortName">ssTimer[2:0]</obj_property>
+      <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
+   </wvobject>
+</wave_config>

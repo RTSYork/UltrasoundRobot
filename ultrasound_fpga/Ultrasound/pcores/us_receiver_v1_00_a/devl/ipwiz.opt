@@ -1,0 +1,14 @@
+-batch 
+-create us_receiver 
+-ver 1.00.a 
+-dir C:\Ultrasound\Ultrasound\ 
+-lang verilog 
+-bus fsl ms 
+-xps 
+-ise 
+-driver 
+-totalin 8
+-totalout 8
+-argin 1
+-argout 1
+-desc "FSL bus"

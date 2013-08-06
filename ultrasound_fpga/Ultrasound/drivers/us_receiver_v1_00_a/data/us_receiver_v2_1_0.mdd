@@ -1,0 +1,16 @@
+##############################################################################
+## Filename:          C:\Ultrasound\Ultrasound\drivers/us_receiver_v1_00_a/data/us_receiver_v2_1_0.mdd
+## Description:       Microprocessor Driver Definition
+## Date:              Tue Jul 23 17:46:10 2013 (by Create and Import Peripheral Wizard)
+##############################################################################
+
+OPTION psf_version = 2.1;
+
+BEGIN DRIVER us_receiver
+
+  OPTION supported_peripherals = (us_receiver);
+  OPTION depends = (common_v1_00_a);
+  OPTION DESC = Ultrasound receiver;
+  OPTION copyfiles = all;
+
+END DRIVER

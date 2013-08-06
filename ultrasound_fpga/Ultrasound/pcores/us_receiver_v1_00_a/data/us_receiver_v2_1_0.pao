@@ -1,0 +1,9 @@
+##############################################################################
+## Filename:          C:\Ultrasound\Ultrasound\pcores/us_receiver_v1_00_a/data/us_receiver_v2_1_0.pao
+## Description:       Peripheral Analysis Order
+## Date:              Tue Jul 23 17:46:04 2013 (by Create and Import Peripheral Wizard)
+##############################################################################
+
+lib us_receiver_v1_00_a us_receiver verilog
+lib us_receiver_v1_00_a mkADC verilog
+lib us_receiver_v1_00_a mkSPI verilog
