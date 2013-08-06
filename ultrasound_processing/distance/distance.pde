@@ -5,23 +5,15 @@ import javax.swing.*;
 
 // ###############################################################################
 
-// Config
-final static int SERIAL_PORT = 0; // Serial port to listen on (-1 for disabled)
+// Serial port to listen on (-1 for disabled)
+final static int SERIAL_PORT = 1;
 
-// mBed
-/*
-final static int SENSOR_COUNT = 1;
-/*
-
-// Arduino
-/*
-final static int SENSOR_COUNT = 1;
-*/
-
-// FPGA
-final static int SENSOR_COUNT = 10;
+// Set to false to use mBed instead of FPGA input
+final static boolean FPGA = false;
 
 // ###############################################################################
+
+final static int SENSOR_COUNT = FPGA ? 10 : 1; // number of ultrasound sensors
 
 final static int DISPLAY_MESSAGE_TIME = 5; // Seconds to display onscreen messages for
 
@@ -115,10 +107,29 @@ void setup() {
   // Check serial enabled
   if(SERIAL_PORT != -1) {
     // Init serial port
-    serialPort = new Serial(this, serialPorts[SERIAL_PORT], 115200);
+    if (FPGA)
+      serialPort = new Serial(this, serialPorts[SERIAL_PORT], 57600);
+    else
+      serialPort = new Serial(this, serialPorts[SERIAL_PORT], 115200);
   
-    // Generate a serialEvent only when a newline character is received
-    serialPort.bufferUntil('\n');
+    if (FPGA) {
+      // Enable single mode & select sensor 0 (default is complete)
+      //serialPort.write(0x02);
+      //serialPort.write(0x01);
+      //serialPort.write(0x03);
+      //serialPort.write(0x00);
+      
+      // Enable distance output
+      serialPort.write(0x05);
+      serialPort.write(0x02);
+    }
+  
+    if (FPGA)
+      // Generate a serialEvent each 2 bytes
+      serialPort.buffer(2);
+    else
+      // Generate serialEvent for each line
+      serialPort.bufferUntil('\n');
     
     // Display message
     displayMessage("Ready, Serial Port: " + serialPorts[SERIAL_PORT]);
@@ -302,7 +313,7 @@ void readFile() {
       
       if (sLine != null) {
         // Process line, don't bother logging to file
-        processSample(sLine, false);
+        //processSample(sLine, false);
       } 
       else {
         // Change state
@@ -314,9 +325,80 @@ void readFile() {
 
 void serialEvent(Serial port) {
   // Process sample from serial port, logging it to file one a complete sample is recieved (if logging enabled)
-  processSample(port.readStringUntil('\n'), true);
+  if (FPGA) {
+    if (port.available() > 1) {
+      int[] inBuffer = new int[2];
+      inBuffer[0] = port.read();
+      inBuffer[1] = port.read();
+      processSample(inBuffer, true);
+    }
+  }
+  else
+    processSample(port.readStringUntil('\n'), true);
 }
 
+// FPGA version
+void processSample(int[] input, boolean log) {
+  if (input != null) {
+    // Check input against start / end
+    if (input[0] == 0xFF && input[1] == 0xFF) {
+      // Check state
+      if (state == WAITING) {
+        // Reset index
+        dataIndex = 0;
+
+        // Change state
+        state = SAMPLING;
+      }
+    } 
+    else if (input[0] == 0x7F && input[1] == 0xFF) {
+      // Check state
+      if (state == SAMPLING) {
+        // Check index
+        if (dataIndex == data.length) {         
+          // Log sample
+          if(log) {
+            writeFile("START");
+            for(int i = 0; i < data.length; i++) writeFile(String.valueOf(data[i]));
+            writeFile("END");
+          }
+          
+          // Update cycle count
+          cycleCount++;
+
+          // Change state                   
+          state = (continuous ? WAITING : COMPLETE);
+        } 
+        else {
+          // Change state
+          state = ERROR;
+        }
+      }
+    } 
+    else if (state == SAMPLING) {      
+      int index = input[0] & 0x0F;
+      
+      int value = ((input[0] & 0xF0) << 4) | input[1];
+      
+      if (value > 4000)
+        value = -1;
+
+      // Check index
+      if (dataIndex >= data.length) {
+        // Change state
+        state = ERROR;
+
+        // Return early
+        return;
+      }
+
+      // Store value
+      data[dataIndex++] = value;
+    }
+  }
+}
+
+// mBed version
 void processSample(String sInput, boolean log) {
   if (sInput != null) {
     // Remove whitespace (new line) character
@@ -363,7 +445,7 @@ void processSample(String sInput, boolean log) {
     else if (state == SAMPLING) {
       // Convert string to float
       int fInput = int(sInput);
-
+          
       // Check index
       if (dataIndex >= data.length) {
         // Change state

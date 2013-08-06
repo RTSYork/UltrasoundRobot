@@ -8,56 +8,31 @@ import javax.swing.*;
 // Room temp
 final static float TEMPERATURE = 22;
 
-// Config
-final static int SERIAL_PORT = 0; // Serial port to listen on (-1 for disabled)
+// Serial port to listen on (-1 for disabled)
+final static int SERIAL_PORT = 1;
 
-// mBed
-/*
-final static int SAMPLE_TIME = 4000; // uS
-final static int SAMPLE_RATE = 80000; // Hz
-
-final static int SENSOR_COUNT = 1; // number of ultrasound sensors
-
-final static int VAL_MIN = 0; // 12-bit
-final static int VAL_MAX = 4095; // 12-bit
-
-final static float VOLT_MIN = 0;
-final static float VOLT_MAX = 3.3;
-/*
-
-// Arduino
-/*
-final static int SAMPLE_TIME = 4000; // uS
-final static int SAMPLE_RATE = 63291; // Hz
-
-final static int SENSOR_COUNT = 1; // number of ultrasound sensors
-
-final static int VAL_MIN = 0; // 10-bit
-final static int VAL_MAX = 1023; // 10-bit
-
-final static float VOLT_MIN = 0;
-final static float VOLT_MAX = 5;
-*/
-
-// FPGA
-final static int SAMPLE_TIME = 142858; // uS
-final static int SAMPLE_RATE = 35000; // Hz
-
-final static int SENSOR_COUNT = 10; // number of ultrasound sensors
-
-final static int VAL_MIN = 0; // 10-bit
-final static int VAL_MAX = 1023; // 10-bit
-
-final static float VOLT_MIN = 0;
-final static float VOLT_MAX = 3.3;
+// Set to false to use mBed instead of FPGA input
+final static boolean FPGA = false;
 
 // ###############################################################################
+
+final static int SAMPLE_TIME = FPGA ? 5000 : 4000; // uS
+final static int SAMPLE_RATE = 80000; // Hz
+
+final static int SENSOR_COUNT = FPGA ? 10 : 1; // number of ultrasound sensors
+
+// 10-bit for FPGA, 12-bit for mBed
+final static int VAL_MIN = 0; 
+final static int VAL_MAX = FPGA ? 1023 : 4095;
+
+final static float VOLT_MIN = 0;
+final static float VOLT_MAX = 3.3;
 
 final static int DISPLAY_MESSAGE_TIME = 5; // Seconds to display onscreen messages for
 
 final static String LOG_FILE_NAME = "ultrasound_log_"; // Prefix of log file name
 
-final static int DEFAULT_PAGE_SIZE = 250; // Samples per screen
+final static int DEFAULT_PAGE_SIZE = 400; // Samples per screen
 final static int PAGE_CHANGE = 10; // Amount to inc / dec page size by per key stroke
 
 final static boolean ENABLE_TRIGGER_BASE_LINE = false; // Enable line at trigger base (op-amp ref voltage)
@@ -67,11 +42,11 @@ final static float SCALE_PRES_VERT = 0.1; // V
 final static float SCALE_PRES_HORIZ = 100; // uS
 final static int MARKER_WIDTH = 5;
 
-final static float TRIGGER_NEAR_FAR_CHANGE = 1200; //  Time at which far trigger is used instead of near trigger
+final static float TRIGGER_NEAR_FAR_CHANGE = 900; //  Time at which far trigger is used instead of near trigger
 final static float TRIGGER_NEAR_FAR_CHANGE_CHANGE = 5; //  Amount to inc / dec trigger switch time by
 final static float TRIGGER_BASE = 1.6; // Default trigger voltage for distance detection
-final static float TRIGGER_DEFAULT_OFFSET_NEAR = 0.05; // Default amount near trigger is away from base value
-final static float TRIGGER_DEFAULT_OFFSET_FAR = 0.05; // Default amount far trigger is away from base value
+final static float TRIGGER_DEFAULT_OFFSET_NEAR = 0.4125; // Default amount near trigger is away from base value
+final static float TRIGGER_DEFAULT_OFFSET_FAR = 0.1125; // Default amount far trigger is away from base value
 final static float TRIGGER_CHANGE = 0.0125; // Amount to inc / dec trigger voltage by per key stroke
 final static float SPEED_OF_SOUND = ((331.3 + 0.606 * TEMPERATURE) * 100) / 1000000; // cm / uS
 
@@ -131,10 +106,10 @@ boolean editFar = false;
 float triggerNearFarChangeTime = 820; // TRIGGER_NEAR_FAR_CHANGE;
 
 // Trigger levels
-float triggerMinNear = 1.4; // TRIGGER_BASE - TRIGGER_DEFAULT_OFFSET_NEAR;
-float triggerMaxNear = 1.6375; // TRIGGER_BASE + TRIGGER_DEFAULT_OFFSET_NEAR;
-float triggerMinFar = 1.4625; // TRIGGER_BASE - TRIGGER_DEFAULT_OFFSET_FAR;
-float triggerMaxFar = 1.575; // TRIGGER_BASE + TRIGGER_DEFAULT_OFFSET_FAR;
+float triggerMinNear = TRIGGER_BASE - TRIGGER_DEFAULT_OFFSET_NEAR; //1.4;
+float triggerMaxNear = TRIGGER_BASE + TRIGGER_DEFAULT_OFFSET_NEAR; //1.6375;
+float triggerMinFar = TRIGGER_BASE - TRIGGER_DEFAULT_OFFSET_FAR; //1.4625;
+float triggerMaxFar = TRIGGER_BASE + TRIGGER_DEFAULT_OFFSET_FAR; //1.575;
 
 // Stats - first to exceed triggers
 int peakIndexMin = -1;
@@ -181,10 +156,29 @@ void setup() {
   // Check serial enabled
   if(SERIAL_PORT != -1) {
     // Init serial port
-    serialPort = new Serial(this, serialPorts[SERIAL_PORT], 115200);
-  
-    // Generate a serialEvent only when a newline character is received
-    serialPort.bufferUntil('\n');
+    if (FPGA)
+      serialPort = new Serial(this, serialPorts[SERIAL_PORT], 57600);
+    else
+      serialPort = new Serial(this, serialPorts[SERIAL_PORT], 115200);
+    
+    if (FPGA) {
+      // Enable single mode & select sensor 0 (default is complete)
+      //serialPort.write(0x02);
+      //serialPort.write(0x01);
+      //serialPort.write(0x03);
+      //serialPort.write(0x00);
+      
+      // Enable waveform output
+      serialPort.write(0x05);
+      serialPort.write(0x01);
+    }
+    
+    if (FPGA)
+      // Generate a serialEvent each 2 bytes
+      serialPort.buffer(2);
+    else
+      // Generate serialEvent for each line
+      serialPort.bufferUntil('\n');
     
     // Display message
     displayMessage("Ready, Serial Port: " + serialPorts[SERIAL_PORT]);
@@ -376,7 +370,7 @@ void readFile() {
       
       if (sLine != null) {
         // Process line, don't bother logging to file
-        processSample(sLine, false);
+        //processSample(sLine, false);
       } 
       else {
         // Change state
@@ -388,9 +382,135 @@ void readFile() {
 
 void serialEvent(Serial port) {
   // Process sample from serial port, logging it to file one a complete sample is recieved (if logging enabled)
-  processSample(port.readStringUntil('\n'), true);
+  if (FPGA) {
+    if (port.available() > 1) {
+      int[] inBuffer = new int[2];
+      inBuffer[0] = port.read();
+      inBuffer[1] = port.read();
+      processSample(inBuffer, true);
+    }
+  }
+  else
+    processSample(port.readStringUntil('\n'), true);
 }
 
+// FPGA version
+void processSample(int[] input, boolean log) {
+  if (input != null) {
+    // Check input against start / end
+    if (input[0] == 0xFF && input[1] == 0xFF) {
+      // Check state
+      if (state == WAITING) {
+        // Reset index
+        dataIndex = 0;
+
+        // Reset peak index and peak
+        peakIndexMin = -1;
+        peakIndexMax = -1;
+        
+        // Log sample start
+        if(log) writeFile("START");
+
+        // Change state
+        state = SAMPLING;
+      }
+    } 
+    else if (input[0] == 0x7F && input[1] == 0xFF) {
+      // Check state
+      if (state == SAMPLING) {
+        // Check index
+        if (dataIndex == data.length) {         
+          // Update first min time
+          if (peakIndexMin != -1) {
+            // Update time
+            float peakTimeMin = sampleToTime(peakIndexMin) / 2;
+            
+            // Update min time
+            if(minPeakIndexMin == 0 || peakTimeMin < sampleToTime(minPeakIndexMin)) {
+              minPeakIndexMin = peakIndexMin;
+            }
+
+            // Update average
+            avgPeakTimeMin += peakTimeMin;
+            avgPeakTimeMinCount++;
+          }
+
+          // Update first max time
+          if (peakIndexMax != -1) {
+            // Update time
+            float peakTimeMax = sampleToTime(peakIndexMax) / 2;
+            
+            // Update max time
+            if(minPeakIndexMax == 0 || peakTimeMax < sampleToTime(minPeakIndexMax)) {
+              minPeakIndexMax = peakIndexMax;
+            }
+
+            // Update average
+            avgPeakTimeMax += peakTimeMax;
+            avgPeakTimeMaxCount++;
+          }
+
+          // Update cycle count
+          cycleCount++;
+
+          // Change state                   
+          state = (continuous ? WAITING : COMPLETE);
+        } 
+        else {
+          // Change state
+          state = ERROR;
+          println("Error: Not enough samples - got " + dataIndex + " of " + data.length);
+        }
+        
+        // Log sample end
+        if(log) writeFile("END");
+      }
+    } 
+    else if (state == SAMPLING) {
+      int index = input[0] & 0x0F;
+      
+      // Check sensor index - ignore other data
+      if(index != sensorIndex) return;
+      
+      int value = ((input[0] & 0xF0) << 4) | input[1];
+      
+      // Retrieve sample value
+      float fInput = float(value);
+
+      // Check index
+      if (dataIndex >= data.length) {
+        // Change state
+        state = ERROR;
+        println("Error: Too many samples, expecting " + data.length);
+        // Return early
+        return;
+      }
+
+      // Store value
+      data[dataIndex++] = fInput;
+
+      // Map value to voltage
+      float fVoltage = map(fInput, VAL_MIN, VAL_MAX, VOLT_MIN, VOLT_MAX);
+      
+      // Map sample index to sample time
+      float fSampleTime = sampleToTime(dataIndex);
+
+      // Check lower trigger
+      if ((fSampleTime <= triggerNearFarChangeTime && fVoltage <= triggerMinNear) || (fSampleTime > triggerNearFarChangeTime && fVoltage <= triggerMinFar)) {
+        // Set first min index the first time trigger exceeded
+        if(peakIndexMin == -1) peakIndexMin = dataIndex;
+      }
+
+      // Check upper trigger
+      if ((fSampleTime <= triggerNearFarChangeTime && fVoltage >= triggerMaxNear) || (fSampleTime > triggerNearFarChangeTime && fVoltage >= triggerMaxFar)) {
+        // Set first max index the first time trigger exceeded
+        if(peakIndexMax == -1) peakIndexMax = dataIndex;
+      }
+    }
+  }
+}
+
+// mBed version
 void processSample(String sInput, boolean log) {
   if (sInput != null) {
     // Remove whitespace (new line) character
@@ -461,6 +581,7 @@ void processSample(String sInput, boolean log) {
         else {
           // Change state
           state = ERROR;
+          println("Error: Not enough samples - got " + dataIndex + " of " + data.length);
         }
         
         // Log sample end
@@ -473,10 +594,10 @@ void processSample(String sInput, boolean log) {
       
       // Log sample
       if(log) writeFile(sInput);
-      
+            
       // Check sensor index - ignore other data
       if(int(aInput[0]) != sensorIndex) return;
-      
+            
       // Retrieve sample value
       float fInput = float(aInput[1]);
 
@@ -484,7 +605,7 @@ void processSample(String sInput, boolean log) {
       if (dataIndex >= data.length) {
         // Change state
         state = ERROR;
-
+        println("Error: Too many samples, expecting " + data.length);
         // Return early
         return;
       }
