@@ -1,11 +1,11 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <report-views version="2.0" >
  <header>
-  <DateModified>2013-05-19T11:43:23</DateModified>
+  <DateModified>2013-08-06T13:14:22</DateModified>
   <ModuleName>pulsegen</ModuleName>
   <SummaryTimeStamp>2013-05-03T15:06:05</SummaryTimeStamp>
-  <SavedFilePath>C:/temp/ultrasound_fpga/Ultrasound/pcores/pulsegen_v1_00_a/devl/projnav/iseconfig/pulsegen.xreport</SavedFilePath>
-  <ImplementationReportsDirectory>C:/temp/ultrasound_fpga/Ultrasound/pcores/pulsegen_v1_00_a/devl/projnav\</ImplementationReportsDirectory>
+  <SavedFilePath>C:/Ultrasound/PRIY/ultrasound_fpga/Ultrasound/pcores/pulsegen_v1_00_a/devl/projnav/iseconfig/pulsegen.xreport</SavedFilePath>
+  <ImplementationReportsDirectory>C:/Ultrasound/PRIY/ultrasound_fpga/Ultrasound/pcores/pulsegen_v1_00_a/devl/projnav\</ImplementationReportsDirectory>
   <DateInitialized>2013-05-03T14:36:45</DateInitialized>
   <EnableMessageFiltering>false</EnableMessageFiltering>
  </header>

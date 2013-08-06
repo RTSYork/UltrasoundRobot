@@ -1,6 +1,6 @@
 #Please do not modify this file by hand
-XmpVersion: 14.2
-VerMgmt: 14.2
+XmpVersion: 14.6
+VerMgmt: 14.6
 IntStyle: default
 Flow: ise
 MHS File: mb_system.mhs
@@ -23,6 +23,7 @@ ExternalMemSim: 0
 UcfFile: data/mb_system.ucf
 EnableParTimingError: 1
 ShowLicenseDialog: 1
+BInfo: 
 ICacheAddr: MCB3_LPDDR,C_S0_AXI_BASEADDR
 ICacheAddr: MCB3_LPDDR,C_S1_AXI_BASEADDR
 ICacheAddr: MCB3_LPDDR,C_S2_AXI_BASEADDR
