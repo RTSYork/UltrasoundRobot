@@ -1641,7 +1641,7 @@ design rules under a new name.</description>
 <element name="C2" library="rcl" package="C0805" value="" x="2.2225" y="17.78" rot="R90"/>
 <element name="C3" library="rcl" package="C0805" value="" x="7.9375" y="17.78" rot="R270"/>
 <element name="C4" library="rcl" package="C0805" value="" x="12.065" y="18.0975" rot="R180"/>
-<element name="R5" library="rcl" package="R0805" value="1K" x="6.985" y="2.8575" rot="R180"/>
+<element name="R5" library="rcl" package="R0805" value="100" x="6.985" y="2.8575" rot="R180"/>
 <element name="D1" library="diode" package="ZDIO-2.5" value="3V3" x="23.495" y="19.05" rot="R180"/>
 <element name="JP1" library="con-lstb" package="MA03-2" value="" x="23.495" y="10.16" rot="R270">
 <attribute name="OC_NEWARK" value="unknown" x="-9.525" y="-8.89" size="1.778" layer="27" rot="R270" display="off"/>

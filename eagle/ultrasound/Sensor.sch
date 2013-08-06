@@ -15577,7 +15577,7 @@ W = angled&lt;p&gt;
 <part name="C2" library="rcl" deviceset="C-EU" device="C0805"/>
 <part name="C3" library="rcl" deviceset="C-EU" device="C0805"/>
 <part name="C4" library="rcl" deviceset="C-EU" device="C0805"/>
-<part name="R5" library="rcl" deviceset="R-EU_" device="R0805" value="1K"/>
+<part name="R5" library="rcl" deviceset="R-EU_" device="R0805" value="100"/>
 <part name="GND1" library="supply1" deviceset="GND" device=""/>
 <part name="D1" library="diode" deviceset="ZENER-DIODE" device="ZD-2.5" value="3V3"/>
 <part name="GND2" library="supply1" deviceset="GND" device=""/>
