@@ -1,4 +1,4 @@
-OPTION psf_version = 2.1.0;
+OPTION psf_version = 2.1;
 
 BEGIN DRIVER pulsegen
 

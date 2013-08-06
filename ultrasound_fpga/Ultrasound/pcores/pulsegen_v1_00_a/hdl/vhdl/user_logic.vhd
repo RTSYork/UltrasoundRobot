@@ -85,7 +85,7 @@ entity user_logic is
   generic
   (
     -- ADD USER GENERICS BELOW THIS LINE ---------------
-    --USER generics added here
+    SAMPLE_TIME                    : integer              := 1250;
     -- ADD USER GENERICS ABOVE THIS LINE ---------------
 
     -- DO NOT EDIT BELOW THIS LINE ---------------------
@@ -98,8 +98,8 @@ entity user_logic is
   (
     -- ADD USER PORTS BELOW THIS LINE ------------------
     TX_Clk                         : out std_logic;
-	 TX_En                          : out std_logic;
-	 TX_Addr                        : out std_logic_vector(3 downto 0);
+    TX_En                          : out std_logic;
+    TX_Addr                        : out std_logic_vector(3 downto 0);
     -- ADD USER PORTS ABOVE THIS LINE ------------------
 
     -- DO NOT EDIT BELOW THIS LINE ---------------------
@@ -135,7 +135,7 @@ architecture IMP of user_logic is
   type states is (S_START, S_HIGH, S_LOW, S_RST, S_END);
   signal state									 : states;
   signal cycle_counter						 : Natural range 0 to 4095;
-  signal divider_counter					 : Natural range 0 to 1250;
+  signal divider_counter					 : Natural range 0 to SAMPLE_TIME;
   ------------------------------------------
   -- Signals for user logic slave model s/w accessible register example
   ------------------------------------------
@@ -168,7 +168,7 @@ PULSE_GEN_PROC : process( Bus2IP_Clk ) is
 					--Cycles remain
 					TX_En <= '0';
 					TX_Clk <= '1';
-					divider_counter <= 1250;
+					divider_counter <= SAMPLE_TIME;
 					state <= S_HIGH;
 				else
 					--No cycles remain
@@ -179,7 +179,7 @@ PULSE_GEN_PROC : process( Bus2IP_Clk ) is
 				if divider_counter = 0 then
 					--No time remaining
 					TX_Clk <= '0';
-					divider_counter <= 1250;
+					divider_counter <= SAMPLE_TIME;
 					state <= S_LOW;
 				else
 					--Time remaining

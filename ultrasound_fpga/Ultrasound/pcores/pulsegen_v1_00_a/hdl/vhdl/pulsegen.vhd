@@ -116,7 +116,7 @@ entity pulsegen is
   generic
   (
     -- ADD USER GENERICS BELOW THIS LINE ---------------
-    --USER generics added here
+    SAMPLE_TIME                    : integer              := 1250;
     -- ADD USER GENERICS ABOVE THIS LINE ---------------
 
     -- DO NOT EDIT BELOW THIS LINE ---------------------
@@ -335,7 +335,7 @@ begin
     generic map
     (
       -- MAP USER GENERICS BELOW THIS LINE ---------------
-      --USER generics mapped here
+      SAMPLE_TIME                    => SAMPLE_TIME,
       -- MAP USER GENERICS ABOVE THIS LINE ---------------
 
       C_NUM_REG                      => USER_NUM_REG,

@@ -19,6 +19,7 @@
 /**
  * User Logic Slave Space Offsets
  * -- SLV_REG0 : user logic slave module register 0
+ * -- SLV_REG1 : user logic slave module register 1
  */
 #define PULSEGEN_USER_SLV_SPACE_OFFSET (0x00000000)
 #define PULSEGEN_SLV_REG0_OFFSET  (PULSEGEN_USER_SLV_SPACE_OFFSET + 0x00000000)
