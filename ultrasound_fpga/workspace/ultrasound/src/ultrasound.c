@@ -9,6 +9,7 @@
 #include "timer.h"
 #include "usarray.h"
 #include "us_receiver.h"
+#include "mobplat.h"
 
 // --------------------------------------------------------------------------------
 
@@ -32,17 +33,6 @@ enum US_OUTPUT {
 	US_OUTPUT_NONE = 0x00, // Output off
 	US_OUTPUT_WAVEFORM = 0x01, // Raw waveform
 	US_OUTPUT_RANGE = 0x02 // Range data
-};
-
-// Mobile platform commands
-enum PLATFORM_CMD {
-	PLATFORM_CMD_NONE = -1, // No command
-	PLATFORM_CMD_SET_DEBUG = 0x01, // Enable / disable debugging mode
-	PLATFORM_CMD_SET_MODE = 0x02, // Set platform mode (manual / automatic)
-	PLATFORM_CMD_SET_MOTOR_SPD = 0x03, // Set motor speeds (indivual in manual mode / maximum in automatic mode)
-	PLATFORM_CMD_SET_POS = 0x04, // Set target coordinates
-	PLATFORM_CMD_GET_POS = 0x05, // Get current coordinates
-	PLATFORM_CMD_BEEP = 0x06 // Emit beep
 };
 
 // Mobile platform responses
@@ -77,14 +67,6 @@ void ProcessUSArray();
 void Passthrough3PI();
 void TestFSL();
 
-// Helpers to issue commands to mobile platform
-void mpSetDebug(unsigned char state);
-void mpSetMode(unsigned char mode);
-void mpSetMotorSpeed(unsigned char dirMaxSpeed, unsigned char left, unsigned char right);
-void mpSetPos(short X, short Y, short Theta);
-void mpGetPos();
-void mpBeep();
-
 void InterruptHandler_Timer_Sys(void *CallbackRef); // Increment system tick counter
 
 void heartBeat(); // Flash heartbeat LED
@@ -96,7 +78,6 @@ void debugPrint(char* str, char newLine); // Print debugging message if debuggin
 // Variables - devices
 XIntc InterruptController; // Interrupt controller shared between all devices
 uart_buff UartBuffDebug; // UART connection between PC and FPGA
-uart_buff UartBuffRobot; // UART connection between FPGA and 3PI
 gpio_state gpioDipSwitches; // GPIO for 4 on-board dip switches
 gpio_state gpioLEDS; // GPIO for 4 on-board LEDS
 gpio_state gpioUSDebug; // GPIO for ultrasound ADC end of conversion interrupt & debug IO
@@ -698,55 +679,12 @@ void heartBeat() {
 	static unsigned int heartbeatTime = 0;
 	static unsigned char heartbeatState = 0;
 
-	// Toggle hear beat every x ms
+	// Toggle heart beat every x ms
 	if(sysTickCounter > heartbeatTime) {
 		heartbeatState = ~heartbeatState;
 		gpio_write_bit(&gpioLEDS, 0, heartbeatState);
 		heartbeatTime += HEARTBEAT_INTERVAL;
 	}
-}
-
-// --------------------------------------------------------------------------------
-
-void mpSetDebug(unsigned char state) {
-	// Send debug enable command
-	while(uart_putchar(&UartBuffRobot, PLATFORM_CMD_SET_DEBUG) == -1);
-	while(uart_putchar(&UartBuffRobot, state) == -1);
-}
-
-void mpSetMode(unsigned char mode) {
-	// Send platform set mode command
-	while(uart_putchar(&UartBuffRobot, PLATFORM_CMD_SET_MODE) == -1);
-	while(uart_putchar(&UartBuffRobot, mode) == -1);
-}
-
-void mpSetMotorSpeed(unsigned char dirMaxSpeed, unsigned char left, unsigned char right) {
-	// Send motor speeds (dirMaxSpeed is used as direction in manual mode or max speed in automatic mode where left and right are ignored)
-	while(uart_putchar(&UartBuffRobot, PLATFORM_CMD_SET_MOTOR_SPD) == -1);
-	while(uart_putchar(&UartBuffRobot, dirMaxSpeed) == -1);
-	while(uart_putchar(&UartBuffRobot, left) == -1);
-	while(uart_putchar(&UartBuffRobot, right) == -1);
-}
-
-void mpSetPos(short X, short Y, short Theta) {
-	// Send set position command
-	while(uart_putchar(&UartBuffRobot, PLATFORM_CMD_SET_POS) == -1);
-
-	// Send data
-	unsigned short data[3] = {X, Y, Theta};
-	int i;
-	unsigned char* dataPtr = (unsigned char*) &data;
-	for(i = 0; i < 6; i++) while(uart_putchar(&UartBuffRobot, *dataPtr++) == -1);
-}
-
-void mpGetPos() {
-	// Send get position command
-	while(uart_putchar(&UartBuffRobot, PLATFORM_CMD_GET_POS) == -1);
-}
-
-void mpBeep() {
-	// Send beep command
-	while(uart_putchar(&UartBuffRobot, PLATFORM_CMD_BEEP) == -1);
 }
 
 // --------------------------------------------------------------------------------
