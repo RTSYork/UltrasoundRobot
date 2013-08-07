@@ -39,7 +39,7 @@
 								</option>
 								<option id="xilinx.gnu.compiler.dircategory.includes.567467248" name="Include Paths" superClass="xilinx.gnu.compiler.dircategory.includes"/>
 								<option id="xilinx.gnu.mb.compiler.inferred.garbage.681492643" name="Enable garbage collector (-ffunction-sections -fdata-sections)" superClass="xilinx.gnu.mb.compiler.inferred.garbage" value="true" valueType="boolean"/>
-								<option id="xilinx.gnu.mb.compiler.inferred.usediv.1593852832" superClass="xilinx.gnu.mb.compiler.inferred.usediv" value="true" valueType="boolean"/>
+								<option id="xilinx.gnu.mb.compiler.inferred.usediv.1593852832" name="Use hardware divider (-mno-xl-soft-div)" superClass="xilinx.gnu.mb.compiler.inferred.usediv" value="true" valueType="boolean"/>
 								<inputType id="xilinx.gnu.compiler.input.1411061702" name="C source files" superClass="xilinx.gnu.compiler.input"/>
 							</tool>
 							<tool id="xilinx.gnu.mb.cxx.toolchain.compiler.debug.1587898498" name="MicroBlaze g++ compiler" superClass="xilinx.gnu.mb.cxx.toolchain.compiler.debug">
@@ -55,7 +55,7 @@
 									<listOptionValue builtIn="false" value="../../ultrasound_bsp_0/microblaze_0/include"/>
 								</option>
 								<option id="xilinx.gnu.mb.compiler.inferred.garbage.159048490" name="Enable garbage collector (-ffunction-sections -fdata-sections)" superClass="xilinx.gnu.mb.compiler.inferred.garbage" value="true" valueType="boolean"/>
-								<option id="xilinx.gnu.mb.compiler.inferred.usediv.741540759" superClass="xilinx.gnu.mb.compiler.inferred.usediv" value="true" valueType="boolean"/>
+								<option id="xilinx.gnu.mb.compiler.inferred.usediv.741540759" name="Use hardware divider (-mno-xl-soft-div)" superClass="xilinx.gnu.mb.compiler.inferred.usediv" value="true" valueType="boolean"/>
 							</tool>
 							<tool id="xilinx.gnu.mb.toolchain.archiver.223085691" name="MicroBlaze archiver" superClass="xilinx.gnu.mb.toolchain.archiver"/>
 							<tool id="xilinx.gnu.mb.c.toolchain.linker.debug.499210621" name="MicroBlaze gcc linker" superClass="xilinx.gnu.mb.c.toolchain.linker.debug">
@@ -73,7 +73,7 @@
 								</option>
 								<option id="xilinx.gnu.c.linker.option.lscript.2144469335" name="Linker Script" superClass="xilinx.gnu.c.linker.option.lscript" value="../src/lscript.ld" valueType="string"/>
 								<option id="xilinx.gnu.mb.linker.inferred.garbage.1169224352" name="Enable garbage collector (-Wl,--gc-sections)" superClass="xilinx.gnu.mb.linker.inferred.garbage" value="true" valueType="boolean"/>
-								<option id="xilinx.gnu.mb.linker.inferred.usediv.1170178594" superClass="xilinx.gnu.mb.linker.inferred.usediv" value="true" valueType="boolean"/>
+								<option id="xilinx.gnu.mb.linker.inferred.usediv.1170178594" name="Use hardware divider (-mno-xl-soft-div)" superClass="xilinx.gnu.mb.linker.inferred.usediv" value="true" valueType="boolean"/>
 								<inputType id="xilinx.gnu.linker.input.1969912883" superClass="xilinx.gnu.linker.input">
 									<additionalInput kind="additionalinputdependency" paths="$(USER_OBJS)"/>
 									<additionalInput kind="additionalinput" paths="$(LIBS)"/>
@@ -95,7 +95,7 @@
 								</option>
 								<option id="xilinx.gnu.c.linker.option.lscript.324810967" name="Linker Script" superClass="xilinx.gnu.c.linker.option.lscript" value="../src/lscript.ld" valueType="string"/>
 								<option id="xilinx.gnu.mb.linker.inferred.garbage.99140079" name="Enable garbage collector (-Wl,--gc-sections)" superClass="xilinx.gnu.mb.linker.inferred.garbage" value="true" valueType="boolean"/>
-								<option id="xilinx.gnu.mb.linker.inferred.usediv.452650549" superClass="xilinx.gnu.mb.linker.inferred.usediv" value="true" valueType="boolean"/>
+								<option id="xilinx.gnu.mb.linker.inferred.usediv.452650549" name="Use hardware divider (-mno-xl-soft-div)" superClass="xilinx.gnu.mb.linker.inferred.usediv" value="true" valueType="boolean"/>
 							</tool>
 							<tool id="xilinx.gnu.mb.size.debug.358800770" name="MicroBlaze Print Size" superClass="xilinx.gnu.mb.size.debug"/>
 							<tool id="xilinx.elfcheck.mb.debug.347202192" name="Xilinx ELF Check" superClass="xilinx.elfcheck.mb.debug">
@@ -104,7 +104,6 @@
 							</tool>
 						</toolChain>
 					</folderInfo>
-					<fileInfo id="xilinx.gnu.mb.exe.debug.607395238.387272550" name="usarray_old.h" rcbsApplicability="disable" resourcePath="src/usarray_old.h" toolsToInvoke=""/>
 					<fileInfo id="xilinx.gnu.mb.exe.debug.607395238.1879156978" name="usarray.h" rcbsApplicability="disable" resourcePath="src/usarray.h" toolsToInvoke="">
 						<tool customBuildStep="true" id="org.eclipse.cdt.managedbuilder.ui.rcbs.1859522696" name="Resource Custom Build Step">
 							<inputType id="org.eclipse.cdt.managedbuilder.ui.rcbs.inputtype.1247904152" name="Resource Custom Build Step Input Type">
@@ -156,7 +155,7 @@
 								<option id="xilinx.gnu.compiler.inferred.swplatform.includes.1027613340" name="Software Platform Include Path" superClass="xilinx.gnu.compiler.inferred.swplatform.includes" valueType="includePath">
 									<listOptionValue builtIn="false" value="../../ultrasound_bsp_0/microblaze_0/include"/>
 								</option>
-								<option id="xilinx.gnu.mb.compiler.inferred.usediv.1854577661" superClass="xilinx.gnu.mb.compiler.inferred.usediv" value="true" valueType="boolean"/>
+								<option id="xilinx.gnu.mb.compiler.inferred.usediv.1854577661" name="Use hardware divider (-mno-xl-soft-div)" superClass="xilinx.gnu.mb.compiler.inferred.usediv" value="true" valueType="boolean"/>
 								<inputType id="xilinx.gnu.compiler.input.1751832293" name="C source files" superClass="xilinx.gnu.compiler.input"/>
 							</tool>
 							<tool id="xilinx.gnu.mb.cxx.toolchain.compiler.release.716168347" name="MicroBlaze g++ compiler" superClass="xilinx.gnu.mb.cxx.toolchain.compiler.release">
@@ -170,7 +169,7 @@
 								<option id="xilinx.gnu.compiler.inferred.swplatform.includes.1614411738" name="Software Platform Include Path" superClass="xilinx.gnu.compiler.inferred.swplatform.includes" valueType="includePath">
 									<listOptionValue builtIn="false" value="../../ultrasound_bsp_0/microblaze_0/include"/>
 								</option>
-								<option id="xilinx.gnu.mb.compiler.inferred.usediv.1937223552" superClass="xilinx.gnu.mb.compiler.inferred.usediv" value="true" valueType="boolean"/>
+								<option id="xilinx.gnu.mb.compiler.inferred.usediv.1937223552" name="Use hardware divider (-mno-xl-soft-div)" superClass="xilinx.gnu.mb.compiler.inferred.usediv" value="true" valueType="boolean"/>
 							</tool>
 							<tool id="xilinx.gnu.mb.toolchain.archiver.645311500" name="MicroBlaze archiver" superClass="xilinx.gnu.mb.toolchain.archiver"/>
 							<tool id="xilinx.gnu.mb.c.toolchain.linker.release.2083527525" name="MicroBlaze gcc linker" superClass="xilinx.gnu.mb.c.toolchain.linker.release">
@@ -186,7 +185,7 @@
 									<listOptionValue builtIn="false" value="-Wl,--start-group,-lxil,-lgcc,-lc,--end-group"/>
 								</option>
 								<option id="xilinx.gnu.c.linker.option.lscript.1229378106" name="Linker Script" superClass="xilinx.gnu.c.linker.option.lscript" value="../src/lscript.ld" valueType="string"/>
-								<option id="xilinx.gnu.mb.linker.inferred.usediv.588583307" superClass="xilinx.gnu.mb.linker.inferred.usediv" value="true" valueType="boolean"/>
+								<option id="xilinx.gnu.mb.linker.inferred.usediv.588583307" name="Use hardware divider (-mno-xl-soft-div)" superClass="xilinx.gnu.mb.linker.inferred.usediv" value="true" valueType="boolean"/>
 								<inputType id="xilinx.gnu.linker.input.226938051" superClass="xilinx.gnu.linker.input">
 									<additionalInput kind="additionalinputdependency" paths="$(USER_OBJS)"/>
 									<additionalInput kind="additionalinput" paths="$(LIBS)"/>
@@ -206,7 +205,7 @@
 									<listOptionValue builtIn="false" value="-Wl,--start-group,-lxil,-lgcc,-lc,--end-group"/>
 								</option>
 								<option id="xilinx.gnu.c.linker.option.lscript.2117245538" name="Linker Script" superClass="xilinx.gnu.c.linker.option.lscript" value="../src/lscript.ld" valueType="string"/>
-								<option id="xilinx.gnu.mb.linker.inferred.usediv.1013886784" superClass="xilinx.gnu.mb.linker.inferred.usediv" value="true" valueType="boolean"/>
+								<option id="xilinx.gnu.mb.linker.inferred.usediv.1013886784" name="Use hardware divider (-mno-xl-soft-div)" superClass="xilinx.gnu.mb.linker.inferred.usediv" value="true" valueType="boolean"/>
 							</tool>
 							<tool id="xilinx.gnu.mb.size.release.1206449851" name="MicroBlaze Print Size" superClass="xilinx.gnu.mb.size.release"/>
 							<tool id="xilinx.elfcheck.mb.release.241014143" name="Xilinx ELF Check" superClass="xilinx.elfcheck.mb.release">
@@ -215,7 +214,6 @@
 							</tool>
 						</toolChain>
 					</folderInfo>
-					<fileInfo id="xilinx.gnu.mb.exe.release.1946105115.617048723" name="usarray_old.h" rcbsApplicability="disable" resourcePath="src/usarray_old.h" toolsToInvoke=""/>
 					<fileInfo id="xilinx.gnu.mb.exe.release.1946105115.314371576" name="usarray.h" rcbsApplicability="disable" resourcePath="src/usarray.h" toolsToInvoke="">
 						<tool customBuildStep="true" id="org.eclipse.cdt.managedbuilder.ui.rcbs.597635056" name="Resource Custom Build Step">
 							<inputType id="org.eclipse.cdt.managedbuilder.ui.rcbs.inputtype.1360222095" name="Resource Custom Build Step Input Type">

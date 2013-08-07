@@ -30,8 +30,8 @@ enum US_STATE {
 #define TRIGGER_OFFSET_NEAR 41 // Default amount near trigger is away from base value
 #define TRIGGER_OFFSET_FAR 11 // Default amount far trigger is away from base value
 
-extern volatile unsigned short usWaveformData[US_SENSOR_COUNT][US_RX_COUNT]; // Provide external access to sample results
-extern volatile signed short usRangeReadings[US_SENSOR_COUNT]; // Provide external access to range readings
+extern unsigned short usWaveformData[US_SENSOR_COUNT][US_RX_COUNT]; // Provide external access to sample results
+extern signed short usRangeReadings[US_SENSOR_COUNT]; // Provide external access to range readings
 
 int init_usarray();
 

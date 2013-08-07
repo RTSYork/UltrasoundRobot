@@ -86,7 +86,7 @@ BEGIN lmb_bram_if_cntlr
  PARAMETER INSTANCE = microblaze_0_i_bram_ctrl
  PARAMETER HW_VER = 3.10.c
  PARAMETER C_BASEADDR = 0x00000000
- PARAMETER C_HIGHADDR = 0x00003fff
+ PARAMETER C_HIGHADDR = 0x00007fff
  BUS_INTERFACE SLMB = microblaze_0_ilmb
  BUS_INTERFACE BRAM_PORT = microblaze_0_i_bram_ctrl_2_microblaze_0_bram_block
 END
@@ -102,7 +102,7 @@ BEGIN lmb_bram_if_cntlr
  PARAMETER INSTANCE = microblaze_0_d_bram_ctrl
  PARAMETER HW_VER = 3.10.c
  PARAMETER C_BASEADDR = 0x00000000
- PARAMETER C_HIGHADDR = 0x00003fff
+ PARAMETER C_HIGHADDR = 0x00007fff
  BUS_INTERFACE SLMB = microblaze_0_dlmb
  BUS_INTERFACE BRAM_PORT = microblaze_0_d_bram_ctrl_2_microblaze_0_bram_block
 END

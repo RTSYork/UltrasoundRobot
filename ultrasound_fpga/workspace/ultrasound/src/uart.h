@@ -12,17 +12,17 @@ typedef struct uart_buff {
 
 	char *bufferTX;
 	int sizeTX;
-	volatile int indexTXRead;
-	volatile int indexTXWrite;
-	volatile int countTX;
-	volatile char overflowTX;
+	int indexTXRead;
+	int indexTXWrite;
+	int countTX;
+	char overflowTX;
 
 	char *bufferRX;
 	int sizeRX;
-	volatile int indexRXRead;
-	volatile int indexRXWrite;
-	volatile int countRX;
-	volatile char overflowRX;
+	int indexRXRead;
+	int indexRXWrite;
+	int countRX;
+	char overflowRX;
 } uart_buff;
 
 int init_uart_buffers(int deviceID, uart_buff *uart_buf);

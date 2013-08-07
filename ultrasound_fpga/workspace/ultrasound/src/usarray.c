@@ -11,21 +11,21 @@
 
 const unsigned char usSensorMap[] = US_SENSOR_MAP; // Sensor position to address map
 
-volatile enum US_MODE usMode = US_M_SINGLE; // Start in single sensor mode
+enum US_MODE usMode = US_M_SINGLE; // Start in single sensor mode
 
-volatile enum US_STATE usState = US_S_IDLE; // Start with sonar array idle
-volatile unsigned char usSensorIndex = 0; // Next sensor to scan
-volatile unsigned short usSampleIndex = 0; // Sample index, incremented once per ADC conversion, representative of ToF
-volatile unsigned short usWaveformData[US_SENSOR_COUNT][US_RX_COUNT]; // Raw waveform data - stored as ADC results
-volatile signed short usRangeReadings[US_SENSOR_COUNT]; // Latest range readings - stored as sample indexes
+enum US_STATE usState = US_S_IDLE; // Start with sonar array idle
+unsigned char usSensorIndex = 0; // Next sensor to scan
+unsigned short usSampleIndex = 0; // Sample index, incremented once per ADC conversion, representative of ToF
+unsigned short usWaveformData[US_SENSOR_COUNT][US_RX_COUNT]; // Raw waveform data - stored as ADC results
+signed short usRangeReadings[US_SENSOR_COUNT]; // Latest range readings - stored as sample indexes
 
-volatile unsigned short usTriggerChangeIndex = USTimeToSampleIndex(TRIGGER_NEAR_FAR_CHANGE); // Trigger changeover time
-volatile unsigned short usTriggerNearUpper = USVoltageToTriggerLevel(TRIGGER_BASE + TRIGGER_OFFSET_NEAR); // Upper trigger level
-volatile unsigned short usTriggerNearLower = USVoltageToTriggerLevel(TRIGGER_BASE - TRIGGER_OFFSET_NEAR); // Lower trigger level
-volatile unsigned short usTriggerFarUpper = USVoltageToTriggerLevel(TRIGGER_BASE + TRIGGER_OFFSET_FAR); // Upper trigger level
-volatile unsigned short usTriggerFarLower = USVoltageToTriggerLevel(TRIGGER_BASE - TRIGGER_OFFSET_FAR); // Lower trigger level
+unsigned short usTriggerChangeIndex = USTimeToSampleIndex(TRIGGER_NEAR_FAR_CHANGE); // Trigger changeover time
+unsigned short usTriggerNearUpper = USVoltageToTriggerLevel(TRIGGER_BASE + TRIGGER_OFFSET_NEAR); // Upper trigger level
+unsigned short usTriggerNearLower = USVoltageToTriggerLevel(TRIGGER_BASE - TRIGGER_OFFSET_NEAR); // Lower trigger level
+unsigned short usTriggerFarUpper = USVoltageToTriggerLevel(TRIGGER_BASE + TRIGGER_OFFSET_FAR); // Upper trigger level
+unsigned short usTriggerFarLower = USVoltageToTriggerLevel(TRIGGER_BASE - TRIGGER_OFFSET_FAR); // Lower trigger level
 
-volatile signed short usTemperature = 210; // Temperature in degrees C, expressed in tenths
+signed short usTemperature = 210; // Temperature in degrees C, expressed in tenths
 
 
 int init_usarray() {
