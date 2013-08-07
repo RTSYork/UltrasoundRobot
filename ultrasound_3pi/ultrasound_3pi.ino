@@ -148,7 +148,7 @@ unsigned char boolDebugEnabled = 0;
 
 void setup() {
   // Init serial
-  Serial.begin(115200);
+  Serial.begin(57600);
 
   // Send welcome message
   Serial.print("#3PI...");
