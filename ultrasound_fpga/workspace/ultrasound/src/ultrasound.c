@@ -66,6 +66,8 @@ void ProcessSerial3PI();
 void ProcessUSArray();
 void Passthrough3PI();
 void TestFSL();
+void Init3PI();
+void Drive3PI();
 
 void InterruptHandler_Timer_Sys(void *CallbackRef); // Increment system tick counter
 
@@ -103,6 +105,8 @@ char usarrayEnabled = 0x01; // Ultrasound array scanning status
 enum US_OUTPUT usarrayOutputMode = US_OUTPUT_NONE; // Ultrasound array output to debug UART mode
 char usarrayTempTaken = 0x00; // Ultrasound array temperate reading taken
 
+char direction = 0;
+
 // --------------------------------------------------------------------------------
 
 int main() {
@@ -138,10 +142,15 @@ int main() {
 	if(interrupt_ctrl_setup(&InterruptController, XPAR_MICROBLAZE_0_INTC_AXI_UARTLITE_3PI_INTERRUPT_INTR, InterruptHandler_UART, (void *) &UartBuffRobot) != XST_SUCCESS) return XST_SUCCESS;
 
 	// Set ultrasound mode
-	usarray_set_mode(US_M_COMPLETE);
+	//usarray_set_mode(US_M_COMPLETE);
+	usarray_set_mode(US_M_SINGLE);
+	usarray_set_sensor(7);
 
 	// Test us_receiver FSL bus
 	//TestFSL();
+
+	// Initialise 3PI robot
+	Init3PI();
 
 	// Startup message - printed via UART routines now UART initialised
 	uart_print(&UartBuffDebug, "#Ready!\n");
@@ -152,6 +161,7 @@ int main() {
 		ProcessSerialDebug();
 		ProcessSerial3PI();
 		ProcessUSArray();
+		Drive3PI();
 		heartBeat();
 	}
 
@@ -671,6 +681,63 @@ void TestFSL() {
 		print("##FSL Test Passed\n");
 	else
 		print("##FSL Test Failed\n");
+}
+
+// --------------------------------------------------------------------------------
+
+void Init3PI() {
+
+	mpBeep();
+
+	// Set manual mode
+	mpSetMode(0x00);
+
+	// Set motor speeds
+	mpSetMotorSpeed(0, 30, 30);
+}
+
+void Drive3PI() {
+	/*
+	u8 front = (usRangeReadings[6] > 0 && usRangeReadings[6] < 50) ||
+		       (usRangeReadings[7] > 0 && usRangeReadings[7] < 60) ||
+		       (usRangeReadings[8] > 0 && usRangeReadings[8] < 60) ||
+	           (usRangeReadings[9] > 0 && usRangeReadings[9] < 50);
+
+	u8 back =  (usRangeReadings[1] > 0 && usRangeReadings[1] < 50) ||
+		       (usRangeReadings[2] > 0 && usRangeReadings[2] < 60) ||
+		       (usRangeReadings[3] > 0 && usRangeReadings[3] < 60) ||
+		       (usRangeReadings[4] > 0 && usRangeReadings[4] < 50);
+
+	u8 left =  (usRangeReadings[4] > 0 && usRangeReadings[4] < 50) ||
+		       (usRangeReadings[5] > 0 && usRangeReadings[5] < 50) ||
+			   (usRangeReadings[6] > 0 && usRangeReadings[6] < 50);
+
+	u8 right = (usRangeReadings[9] > 0 && usRangeReadings[9] < 50) ||
+		       (usRangeReadings[0] > 0 && usRangeReadings[0] < 50) ||
+		       (usRangeReadings[1] > 0 && usRangeReadings[1] < 50);
+		       */
+
+	u8 front = (usRangeReadings[7] > 0 && usRangeReadings[7] < 60);
+
+	// Reverse direction if something less than 60mm from sensors
+	/*
+	if (front && direction == 0) {
+		mpSetMotorSpeed(3, 30, 30);
+		direction = 1;
+	}
+	else if (back && direction == 1) {
+		mpSetMotorSpeed(0, 30, 30);
+		direction = 0;
+	}
+	*/
+
+	// Spin if something ahead
+	if (front) {
+		mpSetMotorSpeed(1, 30, 30);
+	}
+	else {
+		mpSetMotorSpeed(0, 30, 30);
+	}
 }
 
 // --------------------------------------------------------------------------------
