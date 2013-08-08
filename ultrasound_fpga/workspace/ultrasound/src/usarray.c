@@ -179,13 +179,8 @@ void usarray_update_ranges() {
 			// Check sample against trigger levels
 			if(usWaveformData[iSensor][iSample] <= triggerLower || usWaveformData[iSensor][iSample] >= triggerUpper) {
 				// Update range reading - converting distance from thousandths of mm to mm and halving to retrieve one way distance
-				//usRangeReadings[iSensor] = (((unsigned int) USSampleIndexToTime(iSample)) * speedOfSound) / (1000 * 2);
-				if (iSensor == 0 || iSensor == 5)
-					// Add extra 30mm for adapter on sensors 0 and 5
-					usRangeReadings[iSensor] = ((((unsigned int) USSampleIndexToTime(iSample)) * speedOfSound) / (1000 * 2)) + 10;
-				else
-					usRangeReadings[iSensor] = ((((unsigned int) USSampleIndexToTime(iSample)) * speedOfSound) / (1000 * 2)) - 20;
-				//xil_printf("\nSensor: %d, Sample: %d\n", iSensor, iSample);
+				usRangeReadings[iSensor] = ((((unsigned int) USSampleIndexToTime(iSample)) * speedOfSound) / (1000 * 2)) - 20;
+
 				// Done
 				break;
 			}
