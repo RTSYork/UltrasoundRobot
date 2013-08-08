@@ -11,8 +11,6 @@
 
 const unsigned char usSensorMap[] = US_SENSOR_MAP; // Sensor position to address map
 
-enum US_MODE usMode = US_M_SINGLE; // Start in single sensor mode
-
 unsigned char usSensorIndex = 0; // Next sensor to scan
 unsigned short usSampleIndex = 0; // Sample index, incremented once per ADC conversion, representative of ToF
 unsigned short usWaveformData[US_SENSOR_COUNT][US_RX_COUNT]; // Raw waveform data - stored as ADC results
@@ -45,16 +43,6 @@ int init_usarray() {
 		return XST_SUCCESS;
 	else
 		return XST_FAILURE;
-}
-
-void usarray_set_mode(enum US_MODE newMode) {
-	// Select new mode
-	usMode = newMode;
-}
-
-enum US_MODE usarray_get_mode() {
-	// Return mode
-	return usMode;
 }
 
 void usarray_set_sensor(unsigned char newSensor) {
@@ -95,22 +83,26 @@ void usarray_measure_temp() {
 	usTemperature = (((int) adcTempResult) * 125 * 10) / 1000;
 }
 
-void usarray_scan() {
+void usarray_scan(u8 sensors[], u8 numSensors) {
+	if (numSensors == 0 || numSensors > US_SENSOR_COUNT)
+		return;
+
 	// Reset sample index
 	usSampleIndex = 0;
 
-	int minSensor = (usMode == US_M_SINGLE) ? usSensorIndex : 0;
-	int maxSensor = (usMode == US_M_SINGLE) ? usSensorIndex + 1 : US_SENSOR_COUNT;
 	int sensor;
 	int sample;
+	u8 sensorNum;
 
 	// Iterate through sensors
-	for (sensor = minSensor; sensor < maxSensor; sensor++) {
+	for (sensor = 0; sensor < numSensors; sensor++) {
+		sensorNum = sensors[sensor];
+
 		// Generate ultrasound pulse
-		pulseGen_GeneratePulse(XPAR_AXI_PULSEGEN_US_BASEADDR, 1, usSensorMap[sensor], US_TX_COUNT);
+		pulseGen_GeneratePulse(XPAR_AXI_PULSEGEN_US_BASEADDR, 1, usSensorMap[sensorNum], US_TX_COUNT);
 
 		// Start sampling at 80kHz
-		sendUSSampleRequest(usSensorMap[sensor], US_RX_COUNT, 1250);
+		sendUSSampleRequest(usSensorMap[sensorNum], US_RX_COUNT, 1250);
 
 		// Read all sample data
 		for (sample = 0; sample < US_RX_COUNT; sample++) {
@@ -119,27 +111,29 @@ void usarray_scan() {
 			u32 adcResult;
 			readUSData(&status, &type, &adcResult);
 
-			usWaveformData[sensor][sample] = adcResult;
+			usWaveformData[sensorNum][sample] = adcResult;
 		}
 	}
 }
 
-void usarray_update_ranges() {
+void usarray_update_ranges(u8 sensors[], u8 numSensors) {
+	if (numSensors == 0 || numSensors > US_SENSOR_COUNT)
+		return;
+
 	// Compute speed of sound based on temperature
 	unsigned int speedOfSound = (3313000 + 606 * usTemperature) / 10000; //mm/uS expressed in thousandths
 
-	// Compute sensor start and end indexes based on mode
-	unsigned char usSensorStartIndex = (usMode == US_M_SINGLE ? usSensorIndex : 0);
-	unsigned char usSensorEndIndex = (usMode == US_M_SINGLE ? usSensorIndex + 1: US_SENSOR_COUNT);
-
 	// Update range readings for each sensor
+	u8 sensorNum;
 	int iSensor;
 	int iSample;
 	unsigned short triggerUpper;
 	unsigned short triggerLower;
-	for(iSensor = usSensorStartIndex; iSensor < usSensorEndIndex; iSensor++) {
+	for(iSensor = 0; iSensor < numSensors; iSensor++) {
+		sensorNum = sensors[iSensor];
+
 		// Assume nothing will be found
-		usRangeReadings[iSensor] = -1;
+		usRangeReadings[sensorNum] = -1;
 
 		// Example each sample
 		for(iSample = 0; iSample < US_RX_COUNT; iSample++) {
@@ -153,9 +147,9 @@ void usarray_update_ranges() {
 			}
 
 			// Check sample against trigger levels
-			if(usWaveformData[iSensor][iSample] <= triggerLower || usWaveformData[iSensor][iSample] >= triggerUpper) {
+			if(usWaveformData[sensorNum][iSample] <= triggerLower || usWaveformData[sensorNum][iSample] >= triggerUpper) {
 				// Update range reading - converting distance from thousandths of mm to mm and halving to retrieve one way distance
-				usRangeReadings[iSensor] = ((((unsigned int) USSampleIndexToTime(iSample)) * speedOfSound) / (1000 * 2)) - 20;
+				usRangeReadings[sensorNum] = ((((unsigned int) USSampleIndexToTime(iSample)) * speedOfSound) / (1000 * 2)) - 40;
 
 				// Done
 				break;

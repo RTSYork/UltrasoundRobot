@@ -28,6 +28,8 @@ struct POSITION mpCurrentPos; // Current platform position
 // Variables - ultrasound array
 char usarrayEnabled = 0x01; // Ultrasound array scanning status
 enum US_OUTPUT usarrayOutputMode = US_OUTPUT_NONE; // Ultrasound array output to debug UART mode
+u8 sensors[10]; // Array of sensors to sample
+u8 numSensors = 0; // Number of sensors to sample (size of sensor array)
 
 // --------------------------------------------------------------------------------
 
@@ -63,10 +65,14 @@ int main() {
 	if(interrupt_ctrl_setup(&InterruptController, XPAR_MICROBLAZE_0_INTC_USB_UART_INTERRUPT_INTR, InterruptHandler_UART, (void *) &UartBuffDebug) != XST_SUCCESS) return XST_SUCCESS;
 	if(interrupt_ctrl_setup(&InterruptController, XPAR_MICROBLAZE_0_INTC_AXI_UARTLITE_3PI_INTERRUPT_INTR, InterruptHandler_UART, (void *) &UartBuffRobot) != XST_SUCCESS) return XST_SUCCESS;
 
-	// Set ultrasound mode
-	//usarray_set_mode(US_M_COMPLETE);
-	usarray_set_mode(US_M_SINGLE);
-	usarray_set_sensor(7);
+	// Set active ultrasound sensors
+	numSensors = 6;
+	sensors[0] = 0;
+	sensors[1] = 5;
+	sensors[2] = 6;
+	sensors[3] = 7;
+	sensors[4] = 8;
+	sensors[5] = 9;
 
 	// Test us_receiver FSL bus
 	//TestFSL();
@@ -154,7 +160,8 @@ void ProcessSerialDebug() {
 				}
 				case 0x01: {
 					// Enable single sensor mode
-					usarray_set_mode(US_M_SINGLE);
+					numSensors = 1;
+					sensors[0] = usarray_get_sensor();
 
 					// Enable array
 					usarrayEnabled = 0x01;
@@ -166,7 +173,17 @@ void ProcessSerialDebug() {
 				}
 				case 0x02: {
 					// Enable complete array mode
-					usarray_set_mode(US_M_COMPLETE);
+					numSensors = 10;
+					sensors[0] = 0;
+					sensors[1] = 1;
+					sensors[2] = 2;
+					sensors[3] = 3;
+					sensors[4] = 4;
+					sensors[5] = 5;
+					sensors[6] = 6;
+					sensors[7] = 7;
+					sensors[8] = 8;
+					sensors[9] = 9;
 
 					// Enable array
 					usarrayEnabled = 0x01;
@@ -195,6 +212,8 @@ void ProcessSerialDebug() {
 			if(data >= 0 && data < US_SENSOR_COUNT) {
 				// Select sensor
 				usarray_set_sensor(data);
+				if (numSensors == 1)
+					sensors[0] = data;
 
 				// Output debug info
 				if(debugEnabled) {
@@ -451,18 +470,15 @@ void ProcessSerial3PI() {
 
 void ProcessUSArray() {
 	// Start next scan if array is enabled
-	if(usarrayEnabled) {
+	if(usarrayEnabled && numSensors > 0) {
 		// Start first ranging operation
-		usarray_scan();
+		usarray_scan(sensors, numSensors);
 
 		// Update range array
-		usarray_update_ranges();
+		usarray_update_ranges(sensors, numSensors);
 
 		// Output data if requested
 		if(usarrayOutputMode != US_OUTPUT_NONE) {
-			// Compute sensor start and end index
-			int startIndex = (usarray_get_mode() == US_M_SINGLE ? usarray_get_sensor() : 0);
-			int endIndex = (usarray_get_mode() == US_M_SINGLE ? usarray_get_sensor() + 1 : US_SENSOR_COUNT);
 
 			// Output start message
 			uart_print_char(&UartBuffDebug, 0xFF);
@@ -470,6 +486,7 @@ void ProcessUSArray() {
 
 			// Output data
 			int i, j;
+			u8 sensorNum;
 			switch(usarrayOutputMode) {
 				case US_OUTPUT_NONE: {
 					// Do nothing
@@ -477,11 +494,12 @@ void ProcessUSArray() {
 				}
 				case US_OUTPUT_WAVEFORM: {
 					// Output data for each required sensor
-					for(i = startIndex; i < endIndex; i++) {
+					for(i = 0; i < numSensors; i++) {
 						for(j = 0; j < US_RX_COUNT; j++) {
+							sensorNum = sensors[i];
 							// Print waveform data
-							char first = ((usWaveformData[i][j] & 0xF00) >> 4) | (i & 0x0F);
-							char second = usWaveformData[i][j] & 0xFF;
+							char first = ((usWaveformData[sensorNum][j] & 0xF00) >> 4) | (sensorNum & 0x0F);
+							char second = usWaveformData[sensorNum][j] & 0xFF;
 							uart_print_char(&UartBuffDebug, first);
 							uart_print_char(&UartBuffDebug, second);
 						}
@@ -490,10 +508,11 @@ void ProcessUSArray() {
 				}
 				case US_OUTPUT_RANGE: {
 					// Output data for each required sensor
-					for(i = startIndex; i < endIndex; i++) {
+					for(i = 0; i < numSensors; i++) {
+						sensorNum = sensors[i];
 						// Print range data
-						char first = ((usRangeReadings[i] & 0xF00) >> 4) | (i & 0x0F);
-						char second = usRangeReadings[i] & 0xFF;
+						char first = ((usRangeReadings[sensorNum] & 0xF00) >> 4) | (i & 0x0F);
+						char second = usRangeReadings[sensorNum] & 0xFF;
 						uart_print_char(&UartBuffDebug, first);
 						uart_print_char(&UartBuffDebug, second);
 					}

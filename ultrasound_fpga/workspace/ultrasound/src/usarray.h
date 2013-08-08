@@ -25,9 +25,6 @@ extern signed short usRangeReadings[US_SENSOR_COUNT]; // Provide external access
 
 int init_usarray();
 
-void usarray_set_mode(enum US_MODE newMode);
-enum US_MODE usarray_get_mode();
-
 void usarray_set_sensor(unsigned char newSensor);
 unsigned char usarray_get_sensor();
 
@@ -36,7 +33,7 @@ void usarray_set_triggers(unsigned short changever, unsigned short nearLower, un
 short usarray_get_temperature();
 
 void usarray_measure_temp();
-void usarray_scan();
-void usarray_update_ranges();
+void usarray_scan(u8 sensors[], u8 numSensors);
+void usarray_update_ranges(u8 sensors[], u8 numSensors);
 
 #endif /* USARRAY_H_ */
