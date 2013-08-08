@@ -7,8 +7,6 @@ void mpSetDebug(unsigned char state) {
 	// Send debug enable command
 	while(uart_putchar(&UartBuffRobot, PLATFORM_CMD_SET_DEBUG) == -1);
 	while(uart_putchar(&UartBuffRobot, state) == -1);
-
-	//int x = usRangeReadings[1];
 }
 
 void mpSetMode(unsigned char mode) {

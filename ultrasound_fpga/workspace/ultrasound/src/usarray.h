@@ -6,16 +6,6 @@ enum US_MODE {
 	US_M_COMPLETE, // Scan complete array once
 };
 
-enum US_STATE {
-	US_S_IDLE, // Scan not started yet
-	US_S_ADC_REQUEST, // ADC conversion request needs to be made
-	US_S_ADC_RESPONSE, // ADC conversion result needs to be fetched
-	US_S_COMPLETE, // Scan complete
-	US_S_ADC_ERROR_REQUEST, // ADC error has occurred, EOC flag not set before next conversion trigger time
-	US_S_ADC_ERROR_RESPONSE, // ADC error has occurred, EOC flag has occurred when not expected
-	US_S_TEMP // Temperature reading in progress
-};
-
 #define US_SENSOR_COUNT 10 // Number of sensors installed on platform
 #define US_SENSOR_MAP {9, 10, 11, 1, 2, 3, 4, 5, 6, 8} //Map sensor positions to sensor addresses
 #define US_SAMPLE_RATE 80000 // Hz
@@ -43,13 +33,10 @@ unsigned char usarray_get_sensor();
 
 void usarray_set_triggers(unsigned short changever, unsigned short nearLower, unsigned short nearUpper, unsigned short farLower, unsigned short farUpper);
 
-enum US_STATE usarray_get_status();
-
 short usarray_get_temperature();
 
 void usarray_measure_temp();
 void usarray_scan();
 void usarray_update_ranges();
-void usarray_reset();
 
 #endif /* USARRAY_H_ */

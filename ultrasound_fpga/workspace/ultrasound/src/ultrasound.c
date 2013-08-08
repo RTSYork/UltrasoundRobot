@@ -1,79 +1,4 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include "platform.h"
-#include "xparameters.h"
-
-#include "int_ctrl.h"
-#include "uart.h"
-#include "gpio.h"
-#include "timer.h"
-#include "usarray.h"
-#include "us_receiver.h"
-#include "mobplat.h"
-
-// --------------------------------------------------------------------------------
-
-// Definitions
-
-// PC debugging commands
-enum DEBUG_CMD {
-	DEBUG_CMD_NONE = -1, // No command
-	DEBUG_CMD_SET_DEBUG = 0x01, // Enable / disable debugging output
-	DEBUG_CMD_SET_US_MODE = 0x02, // Set ultrasound array scan mode (single / complete)
-	DEBUG_CMD_SET_US_SENSOR = 0x03, // Set ultrasound array sensor index
-	DEBUG_CMD_SET_US_TRIGGERS = 0x04, // Set ultrasound array trigger levels
-	DEBUG_CMD_SET_US_OUTPUT = 0x05, // Enable / disable ultrasound array data output
-	DEBUG_CMD_ROBOT_COMMAND = 0x06, // Issue command to mobile platform
-	DEBUG_CMD_PING = 0x07, // Issue ping command
-	DEBUG_CMD_ROBOT_PASSTHROUGH = 0x08 // Enter robot passthrough mode, must reset to exit
-};
-
-// Ultrasound data output modes
-enum US_OUTPUT {
-	US_OUTPUT_NONE = 0x00, // Output off
-	US_OUTPUT_WAVEFORM = 0x01, // Raw waveform
-	US_OUTPUT_RANGE = 0x02 // Range data
-};
-
-// Mobile platform responses
-enum PLATFORM_RESP {
-	PLATFORM_RESP_NONE = -1, // No response
-	PLATFORM_RESP_OK = 0x01, // Command succeeded
-	PLATFORM_RESP_ERR = 0x02, // Command failed
-	PLATFORM_RESP_POS = 0x03, // Position update
-	PLATFORM_RESP_BTN = 0x04 // Button press
-};
-
-// Mobile platform position
-struct POSITION {
-	short X;
-	short Y;
-	short Theta;
-};
-
-// Mobile platform
-#define MP_DEBUG_BUF_SIZE 128 // bytes
-
-// Heartbeat
-#define HEARTBEAT_INTERVAL 500 // ms
-
-// --------------------------------------------------------------------------------
-
-// Function prototypes
-
-void ProcessSerialDebug();
-void ProcessSerial3PI();
-void ProcessUSArray();
-void Passthrough3PI();
-void TestFSL();
-void Init3PI();
-void Drive3PI();
-
-void InterruptHandler_Timer_Sys(void *CallbackRef); // Increment system tick counter
-
-void heartBeat(); // Flash heartbeat LED
-
-void debugPrint(char* str, char newLine); // Print debugging message if debugging enabled
+#include "ultrasound.h"
 
 // --------------------------------------------------------------------------------
 
@@ -103,9 +28,6 @@ struct POSITION mpCurrentPos; // Current platform position
 // Variables - ultrasound array
 char usarrayEnabled = 0x01; // Ultrasound array scanning status
 enum US_OUTPUT usarrayOutputMode = US_OUTPUT_NONE; // Ultrasound array output to debug UART mode
-char usarrayTempTaken = 0x00; // Ultrasound array temperate reading taken
-
-char direction = 0;
 
 // --------------------------------------------------------------------------------
 
@@ -152,8 +74,11 @@ int main() {
 	// Initialise 3PI robot
 	Init3PI();
 
+	// Get temperature from ADC
+	usarray_measure_temp();
+
 	// Startup message - printed via UART routines now UART initialised
-	uart_print(&UartBuffDebug, "#Ready!\n");
+	uart_print(&UartBuffDebug, "Ready!\n");
 
 	// Main loop
 	while(1) {
@@ -525,118 +450,61 @@ void ProcessSerial3PI() {
 }
 
 void ProcessUSArray() {
-	// Retrieve current state
-	switch(usarray_get_status()) {
-		case US_S_ADC_ERROR_REQUEST:
-		case US_S_ADC_ERROR_RESPONSE:
-		{
-			// Output debug info - only when array is enabled
-			if(usarrayEnabled) {
-				debugPrint("US ARRAY ADC ERROR!!!", 1);
-			}
-		}
-		case US_S_IDLE:
-		{
-			// Start next scan if array is enabled
-			if(usarrayEnabled) {
-				// Check if temperature reading taken
-				if(usarrayTempTaken) {
-					// Select first sensor (for continuous mode)
-					if(usarray_get_mode() == US_M_COMPLETE) {
-						usarray_set_sensor(0);
-					}
+	// Start next scan if array is enabled
+	if(usarrayEnabled) {
+		// Start first ranging operation
+		usarray_scan();
 
-					// Start first ranging operation
-					//print("##Scanning\n");
-					usarray_scan();
-				} else {
-					//print("##Temperature\n");
-					// Take temperature reading
-					usarray_measure_temp();
+		// Update range array
+		usarray_update_ranges();
 
-					// Set flag
-					usarrayTempTaken = 0x01;
+		// Output data if requested
+		if(usarrayOutputMode != US_OUTPUT_NONE) {
+			// Compute sensor start and end index
+			int startIndex = (usarray_get_mode() == US_M_SINGLE ? usarray_get_sensor() : 0);
+			int endIndex = (usarray_get_mode() == US_M_SINGLE ? usarray_get_sensor() + 1 : US_SENSOR_COUNT);
+
+			// Output start message
+			uart_print_char(&UartBuffDebug, 0xFF);
+			uart_print_char(&UartBuffDebug, 0xFF);
+
+			// Output data
+			int i, j;
+			switch(usarrayOutputMode) {
+				case US_OUTPUT_NONE: {
+					// Do nothing
+					break;
 				}
-			}
-
-			break;
-		}
-		case US_S_COMPLETE:
-		{
-			//print("##Update ranges\n");
-			// Update range array
-			usarray_update_ranges();
-
-			// Output data if requested
-			if(usarrayOutputMode != US_OUTPUT_NONE) {
-				// Compute sensor start and end index
-				int startIndex = (usarray_get_mode() == US_M_SINGLE ? usarray_get_sensor() : 0);
-				int endIndex = (usarray_get_mode() == US_M_SINGLE ? usarray_get_sensor() + 1 : US_SENSOR_COUNT);
-
-				// Output start message
-				//uart_print(&UartBuffDebug, "START\n");
-				uart_print_char(&UartBuffDebug, 0xFF);
-				uart_print_char(&UartBuffDebug, 0xFF);
-
-				// Output data
-				int i, j;
-				switch(usarrayOutputMode) {
-					case US_OUTPUT_NONE: {
-						// Do nothing
-						break;
-					}
-					case US_OUTPUT_WAVEFORM: {
-						// Output data for each required sensor
-						for(i = startIndex; i < endIndex; i++) {
-							for(j = 0; j < US_RX_COUNT; j++) {
-								// Print waveform data
-								//uart_print_int(&UartBuffDebug, i, 0);
-								//while(uart_putchar(&UartBuffDebug, ',') == -1);
-								//uart_print_int(&UartBuffDebug, usWaveformData[i][j], 0);
-								//while(uart_putchar(&UartBuffDebug, '\n') == -1);
-
-								char first = ((usWaveformData[i][j] & 0xF00) >> 4) | (i & 0x0F);
-								char second = usWaveformData[i][j] & 0xFF;
-								uart_print_char(&UartBuffDebug, first);
-								uart_print_char(&UartBuffDebug, second);
-							}
-						}
-						break;
-					}
-					case US_OUTPUT_RANGE: {
-						// Output data for each required sensor
-						for(i = startIndex; i < endIndex; i++) {
-							// Print range data
-							//uart_print_int(&UartBuffDebug, i, 0);
-							//while(uart_putchar(&UartBuffDebug, ',') == -1);
-							//uart_print_int(&UartBuffDebug, usRangeReadings[i], 1);
-							//while(uart_putchar(&UartBuffDebug, '\n') == -1);
-
-							char first = ((usRangeReadings[i] & 0xF00) >> 4) | (i & 0x0F);
-							char second = usRangeReadings[i] & 0xFF;
+				case US_OUTPUT_WAVEFORM: {
+					// Output data for each required sensor
+					for(i = startIndex; i < endIndex; i++) {
+						for(j = 0; j < US_RX_COUNT; j++) {
+							// Print waveform data
+							char first = ((usWaveformData[i][j] & 0xF00) >> 4) | (i & 0x0F);
+							char second = usWaveformData[i][j] & 0xFF;
 							uart_print_char(&UartBuffDebug, first);
 							uart_print_char(&UartBuffDebug, second);
 						}
-						break;
 					}
+					break;
 				}
-
-				// Output end message
-				//uart_print(&UartBuffDebug, "END\n");
-				uart_print_char(&UartBuffDebug, 0x7F);
-				uart_print_char(&UartBuffDebug, 0xFF);
+				case US_OUTPUT_RANGE: {
+					// Output data for each required sensor
+					for(i = startIndex; i < endIndex; i++) {
+						// Print range data
+						char first = ((usRangeReadings[i] & 0xF00) >> 4) | (i & 0x0F);
+						char second = usRangeReadings[i] & 0xFF;
+						uart_print_char(&UartBuffDebug, first);
+						uart_print_char(&UartBuffDebug, second);
+					}
+					break;
+				}
 			}
 
-			// Get ready for next reading
-			usarray_reset();
-
-			break;
+			// Output end message
+			uart_print_char(&UartBuffDebug, 0x7F);
+			uart_print_char(&UartBuffDebug, 0xFF);
 		}
-		case US_S_ADC_REQUEST:
-		case US_S_ADC_RESPONSE:
-		case US_S_TEMP:
-			// Do nothing - ranging or temperature measurement in progress
-			break;
 	}
 }
 
@@ -691,9 +559,6 @@ void Init3PI() {
 
 	// Set manual mode
 	mpSetMode(0x00);
-
-	// Set motor speeds
-	mpSetMotorSpeed(0, 30, 30);
 }
 
 void Drive3PI() {
