@@ -581,46 +581,35 @@ void Init3PI() {
 }
 
 void Drive3PI() {
-	/*
-	u8 front = (usRangeReadings[6] > 0 && usRangeReadings[6] < 50) ||
-		       (usRangeReadings[7] > 0 && usRangeReadings[7] < 60) ||
-		       (usRangeReadings[8] > 0 && usRangeReadings[8] < 60) ||
-	           (usRangeReadings[9] > 0 && usRangeReadings[9] < 50);
 
-	u8 back =  (usRangeReadings[1] > 0 && usRangeReadings[1] < 50) ||
-		       (usRangeReadings[2] > 0 && usRangeReadings[2] < 60) ||
-		       (usRangeReadings[3] > 0 && usRangeReadings[3] < 60) ||
-		       (usRangeReadings[4] > 0 && usRangeReadings[4] < 50);
+	u8 front = usarray_detect_obstacle(7, 60) || usarray_detect_obstacle(8, 60);
+	u8 frontLeft = usarray_detect_obstacle(6, 40);
+	u8 frontRight = usarray_detect_obstacle(9, 40);
+	u8 left = usarray_detect_obstacle(5, 40);
+	u8 right = usarray_detect_obstacle(0, 40);
+	u8 farLeft = usarray_detect_obstacle(5, 80);
 
-	u8 left =  (usRangeReadings[4] > 0 && usRangeReadings[4] < 50) ||
-		       (usRangeReadings[5] > 0 && usRangeReadings[5] < 50) ||
-			   (usRangeReadings[6] > 0 && usRangeReadings[6] < 50);
-
-	u8 right = (usRangeReadings[9] > 0 && usRangeReadings[9] < 50) ||
-		       (usRangeReadings[0] > 0 && usRangeReadings[0] < 50) ||
-		       (usRangeReadings[1] > 0 && usRangeReadings[1] < 50);
-		       */
-
-	u8 front = (usRangeReadings[7] > 0 && usRangeReadings[7] < 60);
-
-	// Reverse direction if something less than 60mm from sensors
-	/*
-	if (front && direction == 0) {
-		mpSetMotorSpeed(3, 30, 30);
-		direction = 1;
+	// Change direction based on sensor readings
+	if (frontLeft) {
+		mpSetMotorSpeed(PLATFORM_DIR_RIGHT, 30, 30);
 	}
-	else if (back && direction == 1) {
-		mpSetMotorSpeed(0, 30, 30);
-		direction = 0;
+	else if (frontRight) {
+		mpSetMotorSpeed(PLATFORM_DIR_LEFT, 30, 30);
 	}
-	*/
-
-	// Spin if something ahead
-	if (front) {
-		mpSetMotorSpeed(1, 30, 30);
+	else if (front && !farLeft) {
+		mpSetMotorSpeed(PLATFORM_DIR_LEFT, 30, 30);
+	}
+	else if (front) {
+		mpSetMotorSpeed(PLATFORM_DIR_RIGHT, 30, 30);
+	}
+	else if (left) {
+		mpSetMotorSpeed(PLATFORM_DIR_FORWARD, 30, 10);
+	}
+	else if (right) {
+		mpSetMotorSpeed(PLATFORM_DIR_FORWARD, 10, 30);
 	}
 	else {
-		mpSetMotorSpeed(0, 30, 30);
+		mpSetMotorSpeed(PLATFORM_DIR_FORWARD, 30, 30);
 	}
 }
 
