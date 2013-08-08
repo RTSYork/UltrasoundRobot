@@ -6,7 +6,7 @@
 #define US_SENSOR_COUNT 10 // Number of sensors installed on platform
 #define US_SENSOR_MAP {9, 10, 11, 1, 2, 3, 4, 5, 6, 8} //Map sensor positions to sensor addresses
 #define US_SAMPLE_RATE 80000 // Hz
-#define US_RX_COUNT 400 // Number of waveform samples to take at US_SAMPLE_RATE in a single ranging operation
+#define US_RX_COUNT 200 // Number of waveform samples to take at US_SAMPLE_RATE in a single ranging operation
 #define US_TX_COUNT 8 // Cycles of 40Khz ultrasound to transmit
 
 #define USADCPrecision 10 // Bits
