@@ -1,5 +1,4 @@
 #include "mobplat.h"
-#include "usarray.h"
 
 uart_buff UartBuffRobot;
 

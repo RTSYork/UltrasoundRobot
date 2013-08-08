@@ -157,3 +157,7 @@ void usarray_update_ranges(u8 sensors[], u8 numSensors) {
 		}
 	}
 }
+
+u8 usarray_detect_obstacle(u8 sensor, u16 distance) {
+	return (usRangeReadings[sensor] > 0 && usRangeReadings[sensor] < distance);
+}

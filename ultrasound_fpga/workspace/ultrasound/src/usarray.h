@@ -1,10 +1,7 @@
 #ifndef USARRAY_H_
 #define USARRAY_H_
 
-enum US_MODE {
-	US_M_SINGLE, // Scan single sensor once
-	US_M_COMPLETE, // Scan complete array once
-};
+#include "xil_types.h"
 
 #define US_SENSOR_COUNT 10 // Number of sensors installed on platform
 #define US_SENSOR_MAP {9, 10, 11, 1, 2, 3, 4, 5, 6, 8} //Map sensor positions to sensor addresses
@@ -35,5 +32,7 @@ short usarray_get_temperature();
 void usarray_measure_temp();
 void usarray_scan(u8 sensors[], u8 numSensors);
 void usarray_update_ranges(u8 sensors[], u8 numSensors);
+
+u8 usarray_detect_obstacle(u8 sensor, u16 distance);
 
 #endif /* USARRAY_H_ */

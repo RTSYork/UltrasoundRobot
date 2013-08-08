@@ -24,6 +24,4 @@ void mpSetPos(short X, short Y, short Theta);
 void mpGetPos();
 void mpBeep();
 
-
-
 #endif /* MOBPLAT_H_ */
