@@ -67,12 +67,12 @@ int main() {
 
 	// Set active ultrasound sensors
 	numSensors = 6;
-	sensors[0] = 0;
-	sensors[1] = 5;
-	sensors[2] = 6;
-	sensors[3] = 7;
-	sensors[4] = 8;
-	sensors[5] = 9;
+	sensors[0] = SENSOR_FRONT_RIGHT;
+	sensors[1] = SENSOR_LEFT_MID;
+	sensors[2] = SENSOR_RIGHT_FRONT;
+	sensors[3] = SENSOR_LEFT_FRONT;
+	sensors[4] = SENSOR_RIGHT_MID;
+	sensors[5] = SENSOR_FRONT_LEFT;
 
 	// Test us_receiver FSL bus
 	//TestFSL();

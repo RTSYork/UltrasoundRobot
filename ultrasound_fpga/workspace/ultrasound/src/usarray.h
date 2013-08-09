@@ -17,6 +17,20 @@
 #define TRIGGER_OFFSET_NEAR 41 // Default amount near trigger is away from base value
 #define TRIGGER_OFFSET_FAR 11 // Default amount far trigger is away from base value
 
+// Sensor locations
+enum SENSOR_POSITION {
+	SENSOR_FRONT_RIGHT = 8,
+	SENSOR_RIGHT_FRONT = 9,
+	SENSOR_RIGHT_MID   = 0,
+	SENSOR_RIGHT_REAR  = 1,
+	SENSOR_REAR_RIGHT  = 2,
+	SENSOR_REAR_LEFT   = 3,
+	SENSOR_LEFT_REAR   = 4,
+	SENSOR_LEFT_MID    = 5,
+	SENSOR_LEFT_FRONT  = 6,
+	SENSOR_FRONT_LEFT  = 7
+};
+
 extern unsigned short usWaveformData[US_SENSOR_COUNT][US_RX_COUNT]; // Provide external access to sample results
 extern signed short usRangeReadings[US_SENSOR_COUNT]; // Provide external access to range readings
 
