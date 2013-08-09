@@ -149,7 +149,7 @@ void usarray_update_ranges(u8 sensors[], u8 numSensors) {
 			// Check sample against trigger levels
 			if(usWaveformData[sensorNum][iSample] <= triggerLower || usWaveformData[sensorNum][iSample] >= triggerUpper) {
 				// Update range reading - converting distance from thousandths of mm to mm and halving to retrieve one way distance
-				usRangeReadings[sensorNum] = ((((unsigned int) USSampleIndexToTime(iSample)) * speedOfSound) / (1000 * 2)) - 40;
+				usRangeReadings[sensorNum] = ((((unsigned int) USSampleIndexToTime(iSample)) * speedOfSound) / (1000 * 2)) - 20;
 
 				// Done
 				break;
