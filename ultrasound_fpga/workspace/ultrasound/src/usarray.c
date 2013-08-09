@@ -158,6 +158,10 @@ void usarray_update_ranges(u8 sensors[], u8 numSensors) {
 	}
 }
 
+u16 usarray_distance(u8 sensor) {
+	return usRangeReadings[sensor];
+}
+
 u8 usarray_detect_obstacle(u8 sensor, u16 distance) {
 	return (usRangeReadings[sensor] > 0 && usRangeReadings[sensor] < distance);
 }

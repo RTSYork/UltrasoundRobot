@@ -33,6 +33,7 @@ void usarray_measure_temp();
 void usarray_scan(u8 sensors[], u8 numSensors);
 void usarray_update_ranges(u8 sensors[], u8 numSensors);
 
+u16 usarray_distance(u8 sensor);
 u8 usarray_detect_obstacle(u8 sensor, u16 distance);
 
 #endif /* USARRAY_H_ */
