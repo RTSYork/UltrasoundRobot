@@ -24,6 +24,8 @@ char mpDebugParse = 0x00; // Currently parsing a debug message
 char mpDebugBuf[MP_DEBUG_BUF_SIZE]; // Platform debug message buffer
 unsigned char mpDebugIndex = 0; // Platform debug mess buffer pointer
 struct POSITION mpCurrentPos; // Current platform position
+enum DRIVE_STATE drivingState = DRIVE_STOP;
+enum DRIVE_STATE nextDrivingState;
 
 // Variables - ultrasound array
 char usarrayEnabled = 0x01; // Ultrasound array scanning status
@@ -572,44 +574,158 @@ void TestFSL() {
 
 // --------------------------------------------------------------------------------
 
+// Driving constants
+#define START_DELAY     10000
+
+#define FRONT_DIST      70
+#define REVERSE_DIST    40
+#define SIDE_DIST       40
+#define NEAR_CLEAR_DIST 80
+#define FAR_CLEAR_DIST  120
+
+#define SPEED_GO        40
+#define SPEED_STOP      0
+#define SPEED_TURN_FAST 30
+#define SPEED_TURN_SLOW 20
+#define SPEED_REVERSE   20
+
 void Init3PI() {
-
-	mpBeep();
-
 	// Set manual mode
 	mpSetMode(0x00);
+	mpBeep();
 }
 
 void Drive3PI() {
 
-	u8 front = usarray_detect_obstacle(7, 60) || usarray_detect_obstacle(8, 60);
-	u8 frontLeft = usarray_detect_obstacle(6, 40);
-	u8 frontRight = usarray_detect_obstacle(9, 40);
-	u8 left = usarray_detect_obstacle(5, 40);
-	u8 right = usarray_detect_obstacle(0, 40);
-	u8 farLeft = usarray_detect_obstacle(5, 80);
+	switch (drivingState) {
+		case DRIVE_STOP:
+			if (sysTickCounter > START_DELAY) {
+				mpBeep();
+				nextDrivingState = DRIVE_FORWARD;
+			}
+			break;
+		case DRIVE_FORWARD:
+			if ((usarray_detect_obstacle(SENSOR_FRONT_RIGHT, FRONT_DIST)
+					|| usarray_detect_obstacle(SENSOR_FRONT_LEFT, FRONT_DIST))
+					&& !usarray_detect_obstacle(SENSOR_RIGHT_MID, FAR_CLEAR_DIST)) {
+				nextDrivingState = DRIVE_SPIN_RIGHT;
+			}
+			else if (usarray_detect_obstacle(SENSOR_FRONT_RIGHT, FRONT_DIST)
+					|| usarray_detect_obstacle(SENSOR_FRONT_LEFT, FRONT_DIST)) {
+				nextDrivingState = DRIVE_SPIN_LEFT;
+			}
+			else if (usarray_detect_obstacle(SENSOR_LEFT_MID, SIDE_DIST)
+					|| usarray_detect_obstacle(SENSOR_LEFT_FRONT, SIDE_DIST)) {
+				nextDrivingState = DRIVE_RIGHT;
+			}
+			else if (usarray_detect_obstacle(SENSOR_RIGHT_MID, SIDE_DIST)
+				|| usarray_detect_obstacle(SENSOR_RIGHT_FRONT, SIDE_DIST)) {
+				nextDrivingState = DRIVE_LEFT;
+			}
+			break;
+		case DRIVE_LEFT:
+			if ((usarray_detect_obstacle(SENSOR_FRONT_RIGHT, FRONT_DIST)
+					|| usarray_detect_obstacle(SENSOR_FRONT_LEFT, FRONT_DIST))
+					&& !usarray_detect_obstacle(SENSOR_RIGHT_MID, FAR_CLEAR_DIST)) {
+				nextDrivingState = DRIVE_SPIN_RIGHT;
+			}
+			else if (usarray_detect_obstacle(SENSOR_FRONT_RIGHT, FRONT_DIST)
+					|| usarray_detect_obstacle(SENSOR_FRONT_LEFT, FRONT_DIST)) {
+				nextDrivingState = DRIVE_SPIN_LEFT;
+			}
+			else if (!usarray_detect_obstacle(SENSOR_RIGHT_MID, SIDE_DIST)) {
+				nextDrivingState = DRIVE_FORWARD;
+			}
+			break;
+		case DRIVE_RIGHT:
+			if ((usarray_detect_obstacle(SENSOR_FRONT_RIGHT, FRONT_DIST)
+					|| usarray_detect_obstacle(SENSOR_FRONT_LEFT, FRONT_DIST))
+					&& !usarray_detect_obstacle(SENSOR_RIGHT_MID, FAR_CLEAR_DIST)) {
+				nextDrivingState = DRIVE_SPIN_RIGHT;
+			}
+			else if (usarray_detect_obstacle(SENSOR_FRONT_RIGHT, FRONT_DIST)
+					|| usarray_detect_obstacle(SENSOR_FRONT_LEFT, FRONT_DIST)) {
+				nextDrivingState = DRIVE_SPIN_LEFT;
+			}
+			else if (!usarray_detect_obstacle(SENSOR_LEFT_MID, SIDE_DIST)) {
+				nextDrivingState = DRIVE_FORWARD;
+			}
+			break;
+		case DRIVE_SPIN_LEFT:
+			if (!usarray_detect_obstacle(SENSOR_FRONT_RIGHT, NEAR_CLEAR_DIST)
+					&& !usarray_detect_obstacle(SENSOR_FRONT_LEFT, NEAR_CLEAR_DIST)
+					&& !usarray_detect_obstacle(SENSOR_RIGHT_FRONT, NEAR_CLEAR_DIST)) {
+				nextDrivingState = DRIVE_FORWARD;
+			}
+			else if (usarray_detect_obstacle(SENSOR_FRONT_RIGHT, SIDE_DIST)
+					|| usarray_detect_obstacle(SENSOR_FRONT_LEFT, SIDE_DIST)
+					|| usarray_detect_obstacle(SENSOR_RIGHT_FRONT, SIDE_DIST)
+					|| usarray_detect_obstacle(SENSOR_LEFT_FRONT, SIDE_DIST)) {
+				nextDrivingState = DRIVE_REVERSE_LEFT;
+			}
+			break;
+		case DRIVE_SPIN_RIGHT:
+			if (!usarray_detect_obstacle(SENSOR_FRONT_RIGHT, NEAR_CLEAR_DIST)
+					&& !usarray_detect_obstacle(SENSOR_FRONT_LEFT, NEAR_CLEAR_DIST)
+					&& !usarray_detect_obstacle(SENSOR_LEFT_FRONT, NEAR_CLEAR_DIST)) {
+				nextDrivingState = DRIVE_FORWARD;
+			}
+			else if (usarray_detect_obstacle(SENSOR_FRONT_RIGHT, SIDE_DIST)
+					|| usarray_detect_obstacle(SENSOR_FRONT_LEFT, SIDE_DIST)
+					|| usarray_detect_obstacle(SENSOR_RIGHT_FRONT, SIDE_DIST)
+					|| usarray_detect_obstacle(SENSOR_LEFT_FRONT, SIDE_DIST)) {
+				nextDrivingState = DRIVE_REVERSE_RIGHT;
+			}
+			break;
+		case DRIVE_REVERSE_LEFT:
+			if (!usarray_detect_obstacle(SENSOR_FRONT_RIGHT, SIDE_DIST)
+					&& !usarray_detect_obstacle(SENSOR_FRONT_LEFT, SIDE_DIST)) {
+				nextDrivingState = DRIVE_SPIN_LEFT;
+			}
+			break;
+		case DRIVE_REVERSE_RIGHT:
+			if (!usarray_detect_obstacle(SENSOR_FRONT_RIGHT, SIDE_DIST)
+					&& !usarray_detect_obstacle(SENSOR_FRONT_LEFT, SIDE_DIST)) {
+				nextDrivingState = DRIVE_SPIN_RIGHT;
+			}
+			break;
+		default:
+			mpSetMotorSpeed(PLATFORM_DIR_FORWARD, 0, 0);
+			break;
+	}
 
-	// Change direction based on sensor readings
-	if (frontLeft) {
-		mpSetMotorSpeed(PLATFORM_DIR_RIGHT, 30, 30);
-	}
-	else if (frontRight) {
-		mpSetMotorSpeed(PLATFORM_DIR_LEFT, 30, 30);
-	}
-	else if (front && !farLeft) {
-		mpSetMotorSpeed(PLATFORM_DIR_LEFT, 30, 30);
-	}
-	else if (front) {
-		mpSetMotorSpeed(PLATFORM_DIR_RIGHT, 30, 30);
-	}
-	else if (left) {
-		mpSetMotorSpeed(PLATFORM_DIR_FORWARD, 30, 10);
-	}
-	else if (right) {
-		mpSetMotorSpeed(PLATFORM_DIR_FORWARD, 10, 30);
-	}
-	else {
-		mpSetMotorSpeed(PLATFORM_DIR_FORWARD, 30, 30);
+
+	if (nextDrivingState != drivingState) {
+		switch (nextDrivingState) {
+			case DRIVE_STOP:
+				mpSetMotorSpeed(PLATFORM_DIR_FORWARD, SPEED_STOP, SPEED_STOP);
+				break;
+			case DRIVE_FORWARD:
+				mpSetMotorSpeed(PLATFORM_DIR_FORWARD, SPEED_GO, SPEED_GO);
+				break;
+			case DRIVE_LEFT:
+				mpSetMotorSpeed(PLATFORM_DIR_FORWARD, SPEED_TURN_SLOW, SPEED_TURN_FAST);
+				break;
+			case DRIVE_RIGHT:
+				mpSetMotorSpeed(PLATFORM_DIR_FORWARD, SPEED_TURN_FAST, SPEED_TURN_SLOW);
+				break;
+			case DRIVE_SPIN_LEFT:
+				mpSetMotorSpeed(PLATFORM_DIR_LEFT, SPEED_TURN_FAST, SPEED_TURN_FAST);
+				break;
+			case DRIVE_SPIN_RIGHT:
+				mpSetMotorSpeed(PLATFORM_DIR_RIGHT, SPEED_TURN_FAST, SPEED_TURN_FAST);
+				break;
+			case DRIVE_REVERSE_LEFT:
+				mpSetMotorSpeed(PLATFORM_DIR_REVERSE, SPEED_REVERSE, SPEED_REVERSE);
+				break;
+			case DRIVE_REVERSE_RIGHT:
+				mpSetMotorSpeed(PLATFORM_DIR_REVERSE, SPEED_REVERSE, SPEED_REVERSE);
+				break;
+			default:
+				break;
+		}
+
+		drivingState = nextDrivingState;
 	}
 }
 
@@ -622,7 +738,10 @@ void heartBeat() {
 	// Toggle heart beat every x ms
 	if(sysTickCounter > heartbeatTime) {
 		heartbeatState = ~heartbeatState;
-		gpio_write_bit(&gpioLEDS, 0, heartbeatState);
+		gpio_write_bit(&gpioLEDS, 0, heartbeatState && (drivingState == DRIVE_SPIN_LEFT || drivingState == DRIVE_REVERSE_LEFT || drivingState == DRIVE_REVERSE_RIGHT || drivingState == DRIVE_STOP));
+		gpio_write_bit(&gpioLEDS, 1, heartbeatState && (drivingState == DRIVE_FORWARD || drivingState == DRIVE_SPIN_LEFT || drivingState == DRIVE_LEFT || drivingState == DRIVE_STOP));
+		gpio_write_bit(&gpioLEDS, 2, heartbeatState && (drivingState == DRIVE_FORWARD || drivingState == DRIVE_SPIN_RIGHT || drivingState == DRIVE_RIGHT || drivingState == DRIVE_STOP));
+		gpio_write_bit(&gpioLEDS, 3, heartbeatState && (drivingState == DRIVE_SPIN_RIGHT || drivingState == DRIVE_REVERSE_LEFT || drivingState == DRIVE_REVERSE_RIGHT || drivingState == DRIVE_STOP));
 		heartbeatTime += HEARTBEAT_INTERVAL;
 	}
 }

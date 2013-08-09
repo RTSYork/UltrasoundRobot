@@ -54,11 +54,23 @@ struct POSITION {
 	short Theta;
 };
 
+// Driving state machine states
+enum DRIVE_STATE {
+	DRIVE_STOP, // Stopped
+	DRIVE_FORWARD, // Driving forward
+	DRIVE_LEFT, // Slow turn left
+	DRIVE_RIGHT, // Slow turn right
+	DRIVE_SPIN_LEFT, // Spin left
+	DRIVE_SPIN_RIGHT, // Spin right
+	DRIVE_REVERSE_LEFT, // Reverse left
+	DRIVE_REVERSE_RIGHT // Reverse right
+};
+
 // Mobile platform
 #define MP_DEBUG_BUF_SIZE 128 // bytes
 
 // Heartbeat
-#define HEARTBEAT_INTERVAL 500 // ms
+#define HEARTBEAT_INTERVAL 200 // ms
 
 // --------------------------------------------------------------------------------
 
