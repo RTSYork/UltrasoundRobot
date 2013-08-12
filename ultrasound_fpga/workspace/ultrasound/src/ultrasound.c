@@ -5,7 +5,7 @@
 // Variables - devices
 XIntc InterruptController; // Interrupt controller shared between all devices
 uart_buff UartBuffDebug; // UART connection between PC and FPGA
-gpio_state gpioDipSwitches; // GPIO for 4 on-board dip switches
+uart_buff UartBuffBT; // UART connection over Bluetooth
 gpio_state gpioLEDS; // GPIO for 4 on-board LEDS
 gpio_state gpioUSDebug; // GPIO for ultrasound ADC end of conversion interrupt & debug IO
 XTmrCtr TimerSys; // Timer for delays
@@ -44,10 +44,10 @@ int main() {
 
 	// Init UARTS
 	if(init_uart_buffers(XPAR_USB_UART_DEVICE_ID, &UartBuffDebug) != XST_SUCCESS) return XST_FAILURE;
+	if(init_uart_buffers(XPAR_AXI_UARTLITE_BLUETOOTH_DEVICE_ID, &UartBuffBT) != XST_SUCCESS) return XST_FAILURE;
 	if(init_uart_buffers(XPAR_AXI_UARTLITE_3PI_DEVICE_ID, &UartBuffRobot) != XST_SUCCESS) return XST_FAILURE;
 
 	// Init GPIO
-	if(init_gpio(XPAR_DIP_SWITCHES_4BITS_DEVICE_ID, 0x0F, 0x00, &gpioDipSwitches) != XST_SUCCESS) return XST_FAILURE;
 	if(init_gpio(XPAR_LEDS_4BITS_DEVICE_ID, 0x00, 0x00, &gpioLEDS) != XST_SUCCESS) return XST_FAILURE;
 
 	// Init timer
@@ -66,6 +66,7 @@ int main() {
 	if(interrupt_ctrl_setup(&InterruptController, XPAR_MICROBLAZE_0_INTC_AXI_TIMER_0_INTERRUPT_INTR, XTmrCtr_InterruptHandler, (void *) &TimerSys) != XST_SUCCESS) return XST_SUCCESS;
 	if(interrupt_ctrl_setup(&InterruptController, XPAR_MICROBLAZE_0_INTC_USB_UART_INTERRUPT_INTR, InterruptHandler_UART, (void *) &UartBuffDebug) != XST_SUCCESS) return XST_SUCCESS;
 	if(interrupt_ctrl_setup(&InterruptController, XPAR_MICROBLAZE_0_INTC_AXI_UARTLITE_3PI_INTERRUPT_INTR, InterruptHandler_UART, (void *) &UartBuffRobot) != XST_SUCCESS) return XST_SUCCESS;
+	if(interrupt_ctrl_setup(&InterruptController, XPAR_MICROBLAZE_0_INTC_AXI_UARTLITE_BLUETOOTH_INTERRUPT_INTR, InterruptHandler_UART, (void *) &UartBuffBT) != XST_SUCCESS) return XST_SUCCESS;
 
 	// Set active ultrasound sensors
 	numSensors = 6;
