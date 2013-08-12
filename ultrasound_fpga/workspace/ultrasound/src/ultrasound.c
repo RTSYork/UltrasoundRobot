@@ -86,6 +86,11 @@ int main() {
 	// Get temperature from ADC
 	usarray_measure_temp();
 
+	// Send test message over Bluetooth UART
+	uart_print(&UartBuffBT, "\x1b[2J\x1b[H");
+	uart_print(&UartBuffBT, "Hello, Bluetooth!\n\n");
+	uart_print(&UartBuffBT, "\n      \n    ###\n   ##@##  \n    ###\n      \n");
+
 	// Startup message - printed via UART routines now UART initialised
 	uart_print(&UartBuffDebug, "Ready!\n");
 
@@ -699,27 +704,51 @@ void Drive3PI() {
 	if (nextDrivingState != drivingState) {
 		switch (nextDrivingState) {
 			case DRIVE_STOP:
+				uart_print(&UartBuffBT, "\x1b[2J\x1b[H");
+				uart_print(&UartBuffBT, "State: STOP\n\n");
+				uart_print(&UartBuffBT, "\n      \n    ###\n   ##@##  \n    ###\n      \n");
 				mpSetMotorSpeed(PLATFORM_DIR_FORWARD, SPEED_STOP, SPEED_STOP);
 				break;
 			case DRIVE_FORWARD:
+				uart_print(&UartBuffBT, "\x1b[2J\x1b[H");
+				uart_print(&UartBuffBT, "State: FORWARD\n\n");
+				uart_print(&UartBuffBT, "\n     |\n    ###\n   ##@##  \n    ###\n      \n");
 				mpSetMotorSpeed(PLATFORM_DIR_FORWARD, SPEED_GO, SPEED_GO);
 				break;
 			case DRIVE_LEFT:
+				uart_print(&UartBuffBT, "\x1b[2J\x1b[H");
+				uart_print(&UartBuffBT, "State: LEFT\n\n");
+				uart_print(&UartBuffBT, "\n     |\n    ###\n < ##@##  \n    ###\n      \n");
 				mpSetMotorSpeed(PLATFORM_DIR_FORWARD, SPEED_TURN_SLOW, SPEED_TURN_FAST);
 				break;
 			case DRIVE_RIGHT:
+				uart_print(&UartBuffBT, "\x1b[2J\x1b[H");
+				uart_print(&UartBuffBT, "State: RIGHT\n\n");
+				uart_print(&UartBuffBT, "\n     |\n    ###\n   ##@## >\n    ###\n      \n");
 				mpSetMotorSpeed(PLATFORM_DIR_FORWARD, SPEED_TURN_FAST, SPEED_TURN_SLOW);
 				break;
 			case DRIVE_SPIN_LEFT:
+				uart_print(&UartBuffBT, "\x1b[2J\x1b[H");
+				uart_print(&UartBuffBT, "State: SPIN LEFT\n\n");
+				uart_print(&UartBuffBT, "\n      \n    ###\n < ##@##  \n    ###\n      \n");
 				mpSetMotorSpeed(PLATFORM_DIR_LEFT, SPEED_TURN_FAST, SPEED_TURN_FAST);
 				break;
 			case DRIVE_SPIN_RIGHT:
+				uart_print(&UartBuffBT, "\x1b[2J\x1b[H");
+				uart_print(&UartBuffBT, "State: SPIN RIGHT\n\n");
+				uart_print(&UartBuffBT, "\n      \n    ###\n   ##@## >\n    ###\n      \n");
 				mpSetMotorSpeed(PLATFORM_DIR_RIGHT, SPEED_TURN_FAST, SPEED_TURN_FAST);
 				break;
 			case DRIVE_REVERSE_LEFT:
+				uart_print(&UartBuffBT, "\x1b[2J\x1b[H");
+				uart_print(&UartBuffBT, "State: REVERSE LEFT\n\n");
+				uart_print(&UartBuffBT, "\n      \n    ###\n < ##@##  \n    ###\n     |\n");
 				mpSetMotorSpeed(PLATFORM_DIR_REVERSE, SPEED_REVERSE, SPEED_REVERSE);
 				break;
 			case DRIVE_REVERSE_RIGHT:
+				uart_print(&UartBuffBT, "\x1b[2J\x1b[H");
+				uart_print(&UartBuffBT, "State: REVERSE RIGHT\n\n");
+				uart_print(&UartBuffBT, "\n      \n    ###\n   ##@## >\n    ###\n     |\n");
 				mpSetMotorSpeed(PLATFORM_DIR_REVERSE, SPEED_REVERSE, SPEED_REVERSE);
 				break;
 			default:
