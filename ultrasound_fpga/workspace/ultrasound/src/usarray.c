@@ -11,9 +11,6 @@
 
 const unsigned char usSensorMap[] = US_SENSOR_MAP; // Sensor position to address map
 
-enum US_MODE usMode = US_M_SINGLE; // Start in single sensor mode
-
-enum US_STATE usState = US_S_IDLE; // Start with sonar array idle
 unsigned char usSensorIndex = 0; // Next sensor to scan
 unsigned short usSampleIndex = 0; // Sample index, incremented once per ADC conversion, representative of ToF
 unsigned short usWaveformData[US_SENSOR_COUNT][US_RX_COUNT]; // Raw waveform data - stored as ADC results
@@ -32,31 +29,20 @@ int init_usarray() {
 	// Reset all ranges
 	int i;
 	for(i = 0; i < US_SENSOR_COUNT; i++) usRangeReadings[i] = -1;
-	//print("#Sending ADC init...\n");
+
 	// Setup ADC by writing to setup register (0x64)
 	// Set to use internal clock for sampling and conversions, use external single ended reference
 	sendUSInit();
-	//print("#Reading ADC init response...\n");
+
 	u8 status;
 	u8 type;
 	u32 data;
 	readUSData(&status, &type, &data);
-	//print("#ADC init done.\n");
 
 	if (status == US_STATUS_OK && type == US_RESP_NONE)
 		return XST_SUCCESS;
 	else
 		return XST_FAILURE;
-}
-
-void usarray_set_mode(enum US_MODE newMode) {
-	// Select new mode
-	usMode = newMode;
-}
-
-enum US_MODE usarray_get_mode() {
-	// Return mode
-	return usMode;
 }
 
 void usarray_set_sensor(unsigned char newSensor) {
@@ -78,24 +64,15 @@ void usarray_set_triggers(unsigned short changever, unsigned short nearLower, un
 	usTriggerFarLower = USVoltageToTriggerLevel(farUpper);
 }
 
-enum US_STATE usarray_get_status() {
-	// Return current status
-	return usState;
-}
-
 short usarray_get_temperature() {
 	// Return temperature
 	return usTemperature;
 }
 
 void usarray_measure_temp() {
-	// Change state
-	usState = US_S_TEMP;
-
-	//print("##Temperature measure sending command...\n");
 	// Compute conversion byte, request temperature conversion and ignore single channel conversion (0xf9)
 	sendUSTempRequest();
-	//print("##Temperature measure reading data...\n");
+
 	// Read temperature back (blocking)
 	u8 status;
 	u8 type;
@@ -104,29 +81,28 @@ void usarray_measure_temp() {
 
 	// This might not be right? Doing (temp*1.25) seems too high, but might just be warm chip.
 	usTemperature = (((int) adcTempResult) * 125 * 10) / 1000;
-	//xil_printf("##Temperature measure done: %d (%d)\n", adcTempResult, adcTempResult, usTemperature);
-	usState = US_S_COMPLETE;
 }
 
-void usarray_scan() {
-	// Change state
-	usState = US_S_ADC_REQUEST;
+void usarray_scan(u8 sensors[], u8 numSensors) {
+	if (numSensors == 0 || numSensors > US_SENSOR_COUNT)
+		return;
 
 	// Reset sample index
 	usSampleIndex = 0;
 
-	int minSensor = (usMode == US_M_SINGLE) ? usSensorIndex : 0;
-	int maxSensor = (usMode == US_M_SINGLE) ? usSensorIndex + 1 : US_SENSOR_COUNT;
 	int sensor;
 	int sample;
+	u8 sensorNum;
 
 	// Iterate through sensors
-	for (sensor = minSensor; sensor < maxSensor; sensor++) {
-		//xil_printf("###Scanning sensor %d...", sensor);
+	for (sensor = 0; sensor < numSensors; sensor++) {
+		sensorNum = sensors[sensor];
+
 		// Generate ultrasound pulse
-		pulseGen_GeneratePulse(XPAR_AXI_PULSEGEN_US_BASEADDR, 1, usSensorMap[sensor], US_TX_COUNT);
+		pulseGen_GeneratePulse(XPAR_AXI_PULSEGEN_US_BASEADDR, 1, usSensorMap[sensorNum], US_TX_COUNT);
+
 		// Start sampling at 80kHz
-		sendUSSampleRequest(usSensorMap[sensor], US_RX_COUNT, 1250);
+		sendUSSampleRequest(usSensorMap[sensorNum], US_RX_COUNT, 1250);
 
 		// Read all sample data
 		for (sample = 0; sample < US_RX_COUNT; sample++) {
@@ -135,39 +111,33 @@ void usarray_scan() {
 			u32 adcResult;
 			readUSData(&status, &type, &adcResult);
 
-			usWaveformData[sensor][sample] = adcResult;
+			usWaveformData[sensorNum][sample] = adcResult;
 		}
-		//print("done\n");
 	}
-
-	usState = US_S_COMPLETE;
 }
 
-void usarray_update_ranges() {
+void usarray_update_ranges(u8 sensors[], u8 numSensors) {
+	if (numSensors == 0 || numSensors > US_SENSOR_COUNT)
+		return;
+
 	// Compute speed of sound based on temperature
 	unsigned int speedOfSound = (3313000 + 606 * usTemperature) / 10000; //mm/uS expressed in thousandths
 
-	// Compute sensor start and end indexes based on mode
-	unsigned char usSensorStartIndex = (usMode == US_M_SINGLE ? usSensorIndex : 0);
-	unsigned char usSensorEndIndex = (usMode == US_M_SINGLE ? usSensorIndex + 1: US_SENSOR_COUNT);
-
-	//xil_printf("\nSample time: %d\nChange Index: %d\nLower: %d\nUpper: %d, Data: %d",
-	//				USSampleIndexToTime(100), usTriggerChangeIndex,
-	//				usTriggerFarLower, usTriggerFarUpper, usWaveformData[9][100]);
-
 	// Update range readings for each sensor
+	u8 sensorNum;
 	int iSensor;
 	int iSample;
 	unsigned short triggerUpper;
 	unsigned short triggerLower;
-	for(iSensor = usSensorStartIndex; iSensor < usSensorEndIndex; iSensor++) {
+	for(iSensor = 0; iSensor < numSensors; iSensor++) {
+		sensorNum = sensors[iSensor];
+
 		// Assume nothing will be found
-		usRangeReadings[iSensor] = -1;
+		usRangeReadings[sensorNum] = -1;
 
 		// Example each sample
 		for(iSample = 0; iSample < US_RX_COUNT; iSample++) {
 			// Work out trigger levels for sample
-			//if(USSampleIndexToTime(iSample) <= usTriggerChangeIndex) {
 			if(iSample <= usTriggerChangeIndex) {
 				triggerUpper = usTriggerNearUpper;
 				triggerLower = usTriggerNearLower;
@@ -177,15 +147,10 @@ void usarray_update_ranges() {
 			}
 
 			// Check sample against trigger levels
-			if(usWaveformData[iSensor][iSample] <= triggerLower || usWaveformData[iSensor][iSample] >= triggerUpper) {
+			if(usWaveformData[sensorNum][iSample] <= triggerLower || usWaveformData[sensorNum][iSample] >= triggerUpper) {
 				// Update range reading - converting distance from thousandths of mm to mm and halving to retrieve one way distance
-				//usRangeReadings[iSensor] = (((unsigned int) USSampleIndexToTime(iSample)) * speedOfSound) / (1000 * 2);
-				if (iSensor == 0 || iSensor == 5)
-					// Add extra 30mm for adapter on sensors 0 and 5
-					usRangeReadings[iSensor] = ((((unsigned int) USSampleIndexToTime(iSample)) * speedOfSound) / (1000 * 2)) + 10;
-				else
-					usRangeReadings[iSensor] = ((((unsigned int) USSampleIndexToTime(iSample)) * speedOfSound) / (1000 * 2)) - 20;
-				//xil_printf("\nSensor: %d, Sample: %d\n", iSensor, iSample);
+				usRangeReadings[sensorNum] = ((((unsigned int) USSampleIndexToTime(iSample)) * speedOfSound) / (1000 * 2)) - 20;
+
 				// Done
 				break;
 			}
@@ -193,7 +158,10 @@ void usarray_update_ranges() {
 	}
 }
 
-void usarray_reset() {
-	// Change state - timer will stop itself and / or ADC conversion result will be ignored - final state will likely be ERROR_ADC_*
-	usState = US_S_IDLE;
+u16 usarray_distance(u8 sensor) {
+	return usRangeReadings[sensor];
+}
+
+u8 usarray_detect_obstacle(u8 sensor, u16 distance) {
+	return (usRangeReadings[sensor] > 0 && usRangeReadings[sensor] < distance);
 }

@@ -14,6 +14,14 @@ enum PLATFORM_CMD {
 	PLATFORM_CMD_BEEP = 0x06 // Emit beep
 };
 
+// Mobile platform directions
+enum PLATFORM_DIR {
+	PLATFORM_DIR_FORWARD = 0x00, // Both wheels forward
+	PLATFORM_DIR_RIGHT = 0x01, // Spin right (left forward, right reverse)
+	PLATFORM_DIR_LEFT = 0x02, // Spin left (right forward, left reverse)
+	PLATFORM_DIR_REVERSE = 0x03 // Both wheels reverse
+};
+
 extern uart_buff UartBuffRobot; // UART connection between FPGA and 3PI
 
 // Helpers to issue commands to mobile platform
@@ -23,7 +31,5 @@ void mpSetMotorSpeed(unsigned char dirMaxSpeed, unsigned char left, unsigned cha
 void mpSetPos(short X, short Y, short Theta);
 void mpGetPos();
 void mpBeep();
-
-
 
 #endif /* MOBPLAT_H_ */

@@ -6,9 +6,6 @@ int init_uart_buffers(int deviceID, uart_buff *uart_buf) {
 	// Init UART
 	if(XUartLite_Initialize((XUartLite*) &(uart_buf->uart), deviceID) != XST_SUCCESS) return XST_FAILURE;
 
-	// Self test - cannot be performed as the UART will have already been used by print
-	// if(XUartLite_SelfTest(uart) != XST_SUCCESS) return XST_FAILURE;
-
 	// Setup UART buffers
 	uart_buf->bufferRX = malloc(BUFFER_SIZE_RX);
 	if(uart_buf->bufferRX == NULL) return XST_FAILURE;
@@ -106,14 +103,8 @@ int uart_putchar(uart_buff *buf, char c) {
 
 	// Send first byte if TX FIFO empty - interrupt handler will do the rest :-)
 	if(XUartLite_GetStatusReg(buf->uart.RegBaseAddress) & XUL_SR_TX_FIFO_EMPTY) {
-		// Disable interrupts
-		//XUartLite_DisableIntr(buf->uart.RegBaseAddress);
-
 		// Bit naughty, call interrupt handler to send first byte
 		InterruptHandler_UART((void*) buf);
-
-		// Enable interrupts
-		//XUartLite_EnableIntr(buf->uart.RegBaseAddress);
 	}
 
 	// Yey!

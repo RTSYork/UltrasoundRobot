@@ -1,77 +1,4 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include "platform.h"
-#include "xparameters.h"
-
-#include "int_ctrl.h"
-#include "uart.h"
-#include "gpio.h"
-#include "timer.h"
-#include "usarray.h"
-#include "us_receiver.h"
-#include "mobplat.h"
-
-// --------------------------------------------------------------------------------
-
-// Definitions
-
-// PC debugging commands
-enum DEBUG_CMD {
-	DEBUG_CMD_NONE = -1, // No command
-	DEBUG_CMD_SET_DEBUG = 0x01, // Enable / disable debugging output
-	DEBUG_CMD_SET_US_MODE = 0x02, // Set ultrasound array scan mode (single / complete)
-	DEBUG_CMD_SET_US_SENSOR = 0x03, // Set ultrasound array sensor index
-	DEBUG_CMD_SET_US_TRIGGERS = 0x04, // Set ultrasound array trigger levels
-	DEBUG_CMD_SET_US_OUTPUT = 0x05, // Enable / disable ultrasound array data output
-	DEBUG_CMD_ROBOT_COMMAND = 0x06, // Issue command to mobile platform
-	DEBUG_CMD_PING = 0x07, // Issue ping command
-	DEBUG_CMD_ROBOT_PASSTHROUGH = 0x08 // Enter robot passthrough mode, must reset to exit
-};
-
-// Ultrasound data output modes
-enum US_OUTPUT {
-	US_OUTPUT_NONE = 0x00, // Output off
-	US_OUTPUT_WAVEFORM = 0x01, // Raw waveform
-	US_OUTPUT_RANGE = 0x02 // Range data
-};
-
-// Mobile platform responses
-enum PLATFORM_RESP {
-	PLATFORM_RESP_NONE = -1, // No response
-	PLATFORM_RESP_OK = 0x01, // Command succeeded
-	PLATFORM_RESP_ERR = 0x02, // Command failed
-	PLATFORM_RESP_POS = 0x03, // Position update
-	PLATFORM_RESP_BTN = 0x04 // Button press
-};
-
-// Mobile platform position
-struct POSITION {
-	short X;
-	short Y;
-	short Theta;
-};
-
-// Mobile platform
-#define MP_DEBUG_BUF_SIZE 128 // bytes
-
-// Heartbeat
-#define HEARTBEAT_INTERVAL 500 // ms
-
-// --------------------------------------------------------------------------------
-
-// Function prototypes
-
-void ProcessSerialDebug();
-void ProcessSerial3PI();
-void ProcessUSArray();
-void Passthrough3PI();
-void TestFSL();
-
-void InterruptHandler_Timer_Sys(void *CallbackRef); // Increment system tick counter
-
-void heartBeat(); // Flash heartbeat LED
-
-void debugPrint(char* str, char newLine); // Print debugging message if debugging enabled
+#include "ultrasound.h"
 
 // --------------------------------------------------------------------------------
 
@@ -97,11 +24,14 @@ char mpDebugParse = 0x00; // Currently parsing a debug message
 char mpDebugBuf[MP_DEBUG_BUF_SIZE]; // Platform debug message buffer
 unsigned char mpDebugIndex = 0; // Platform debug mess buffer pointer
 struct POSITION mpCurrentPos; // Current platform position
+enum DRIVE_STATE drivingState = DRIVE_STOP;
+enum DRIVE_STATE nextDrivingState;
 
 // Variables - ultrasound array
 char usarrayEnabled = 0x01; // Ultrasound array scanning status
 enum US_OUTPUT usarrayOutputMode = US_OUTPUT_NONE; // Ultrasound array output to debug UART mode
-char usarrayTempTaken = 0x00; // Ultrasound array temperate reading taken
+u8 sensors[10]; // Array of sensors to sample
+u8 numSensors = 0; // Number of sensors to sample (size of sensor array)
 
 // --------------------------------------------------------------------------------
 
@@ -137,14 +67,26 @@ int main() {
 	if(interrupt_ctrl_setup(&InterruptController, XPAR_MICROBLAZE_0_INTC_USB_UART_INTERRUPT_INTR, InterruptHandler_UART, (void *) &UartBuffDebug) != XST_SUCCESS) return XST_SUCCESS;
 	if(interrupt_ctrl_setup(&InterruptController, XPAR_MICROBLAZE_0_INTC_AXI_UARTLITE_3PI_INTERRUPT_INTR, InterruptHandler_UART, (void *) &UartBuffRobot) != XST_SUCCESS) return XST_SUCCESS;
 
-	// Set ultrasound mode
-	usarray_set_mode(US_M_COMPLETE);
+	// Set active ultrasound sensors
+	numSensors = 6;
+	sensors[0] = SENSOR_FRONT_RIGHT;
+	sensors[1] = SENSOR_LEFT_MID;
+	sensors[2] = SENSOR_RIGHT_FRONT;
+	sensors[3] = SENSOR_LEFT_FRONT;
+	sensors[4] = SENSOR_RIGHT_MID;
+	sensors[5] = SENSOR_FRONT_LEFT;
 
 	// Test us_receiver FSL bus
 	//TestFSL();
 
+	// Initialise 3PI robot
+	Init3PI();
+
+	// Get temperature from ADC
+	usarray_measure_temp();
+
 	// Startup message - printed via UART routines now UART initialised
-	uart_print(&UartBuffDebug, "#Ready!\n");
+	uart_print(&UartBuffDebug, "Ready!\n");
 
 	// Main loop
 	while(1) {
@@ -152,6 +94,7 @@ int main() {
 		ProcessSerialDebug();
 		ProcessSerial3PI();
 		ProcessUSArray();
+		Drive3PI();
 		heartBeat();
 	}
 
@@ -219,7 +162,8 @@ void ProcessSerialDebug() {
 				}
 				case 0x01: {
 					// Enable single sensor mode
-					usarray_set_mode(US_M_SINGLE);
+					numSensors = 1;
+					sensors[0] = usarray_get_sensor();
 
 					// Enable array
 					usarrayEnabled = 0x01;
@@ -231,7 +175,17 @@ void ProcessSerialDebug() {
 				}
 				case 0x02: {
 					// Enable complete array mode
-					usarray_set_mode(US_M_COMPLETE);
+					numSensors = 10;
+					sensors[0] = 0;
+					sensors[1] = 1;
+					sensors[2] = 2;
+					sensors[3] = 3;
+					sensors[4] = 4;
+					sensors[5] = 5;
+					sensors[6] = 6;
+					sensors[7] = 7;
+					sensors[8] = 8;
+					sensors[9] = 9;
 
 					// Enable array
 					usarrayEnabled = 0x01;
@@ -260,6 +214,8 @@ void ProcessSerialDebug() {
 			if(data >= 0 && data < US_SENSOR_COUNT) {
 				// Select sensor
 				usarray_set_sensor(data);
+				if (numSensors == 1)
+					sensors[0] = data;
 
 				// Output debug info
 				if(debugEnabled) {
@@ -515,118 +471,61 @@ void ProcessSerial3PI() {
 }
 
 void ProcessUSArray() {
-	// Retrieve current state
-	switch(usarray_get_status()) {
-		case US_S_ADC_ERROR_REQUEST:
-		case US_S_ADC_ERROR_RESPONSE:
-		{
-			// Output debug info - only when array is enabled
-			if(usarrayEnabled) {
-				debugPrint("US ARRAY ADC ERROR!!!", 1);
-			}
-		}
-		case US_S_IDLE:
-		{
-			// Start next scan if array is enabled
-			if(usarrayEnabled) {
-				// Check if temperature reading taken
-				if(usarrayTempTaken) {
-					// Select first sensor (for continuous mode)
-					if(usarray_get_mode() == US_M_COMPLETE) {
-						usarray_set_sensor(0);
-					}
+	// Start next scan if array is enabled
+	if(usarrayEnabled && numSensors > 0) {
+		// Start first ranging operation
+		usarray_scan(sensors, numSensors);
 
-					// Start first ranging operation
-					//print("##Scanning\n");
-					usarray_scan();
-				} else {
-					//print("##Temperature\n");
-					// Take temperature reading
-					usarray_measure_temp();
+		// Update range array
+		usarray_update_ranges(sensors, numSensors);
 
-					// Set flag
-					usarrayTempTaken = 0x01;
+		// Output data if requested
+		if(usarrayOutputMode != US_OUTPUT_NONE) {
+
+			// Output start message
+			uart_print_char(&UartBuffDebug, 0xFF);
+			uart_print_char(&UartBuffDebug, 0xFF);
+
+			// Output data
+			int i, j;
+			u8 sensorNum;
+			switch(usarrayOutputMode) {
+				case US_OUTPUT_NONE: {
+					// Do nothing
+					break;
 				}
-			}
-
-			break;
-		}
-		case US_S_COMPLETE:
-		{
-			//print("##Update ranges\n");
-			// Update range array
-			usarray_update_ranges();
-
-			// Output data if requested
-			if(usarrayOutputMode != US_OUTPUT_NONE) {
-				// Compute sensor start and end index
-				int startIndex = (usarray_get_mode() == US_M_SINGLE ? usarray_get_sensor() : 0);
-				int endIndex = (usarray_get_mode() == US_M_SINGLE ? usarray_get_sensor() + 1 : US_SENSOR_COUNT);
-
-				// Output start message
-				//uart_print(&UartBuffDebug, "START\n");
-				uart_print_char(&UartBuffDebug, 0xFF);
-				uart_print_char(&UartBuffDebug, 0xFF);
-
-				// Output data
-				int i, j;
-				switch(usarrayOutputMode) {
-					case US_OUTPUT_NONE: {
-						// Do nothing
-						break;
-					}
-					case US_OUTPUT_WAVEFORM: {
-						// Output data for each required sensor
-						for(i = startIndex; i < endIndex; i++) {
-							for(j = 0; j < US_RX_COUNT; j++) {
-								// Print waveform data
-								//uart_print_int(&UartBuffDebug, i, 0);
-								//while(uart_putchar(&UartBuffDebug, ',') == -1);
-								//uart_print_int(&UartBuffDebug, usWaveformData[i][j], 0);
-								//while(uart_putchar(&UartBuffDebug, '\n') == -1);
-
-								char first = ((usWaveformData[i][j] & 0xF00) >> 4) | (i & 0x0F);
-								char second = usWaveformData[i][j] & 0xFF;
-								uart_print_char(&UartBuffDebug, first);
-								uart_print_char(&UartBuffDebug, second);
-							}
-						}
-						break;
-					}
-					case US_OUTPUT_RANGE: {
-						// Output data for each required sensor
-						for(i = startIndex; i < endIndex; i++) {
-							// Print range data
-							//uart_print_int(&UartBuffDebug, i, 0);
-							//while(uart_putchar(&UartBuffDebug, ',') == -1);
-							//uart_print_int(&UartBuffDebug, usRangeReadings[i], 1);
-							//while(uart_putchar(&UartBuffDebug, '\n') == -1);
-
-							char first = ((usRangeReadings[i] & 0xF00) >> 4) | (i & 0x0F);
-							char second = usRangeReadings[i] & 0xFF;
+				case US_OUTPUT_WAVEFORM: {
+					// Output data for each required sensor
+					for(i = 0; i < numSensors; i++) {
+						for(j = 0; j < US_RX_COUNT; j++) {
+							sensorNum = sensors[i];
+							// Print waveform data
+							char first = ((usWaveformData[sensorNum][j] & 0xF00) >> 4) | (sensorNum & 0x0F);
+							char second = usWaveformData[sensorNum][j] & 0xFF;
 							uart_print_char(&UartBuffDebug, first);
 							uart_print_char(&UartBuffDebug, second);
 						}
-						break;
 					}
+					break;
 				}
-
-				// Output end message
-				//uart_print(&UartBuffDebug, "END\n");
-				uart_print_char(&UartBuffDebug, 0x7F);
-				uart_print_char(&UartBuffDebug, 0xFF);
+				case US_OUTPUT_RANGE: {
+					// Output data for each required sensor
+					for(i = 0; i < numSensors; i++) {
+						sensorNum = sensors[i];
+						// Print range data
+						char first = ((usRangeReadings[sensorNum] & 0xF00) >> 4) | (i & 0x0F);
+						char second = usRangeReadings[sensorNum] & 0xFF;
+						uart_print_char(&UartBuffDebug, first);
+						uart_print_char(&UartBuffDebug, second);
+					}
+					break;
+				}
 			}
 
-			// Get ready for next reading
-			usarray_reset();
-
-			break;
+			// Output end message
+			uart_print_char(&UartBuffDebug, 0x7F);
+			uart_print_char(&UartBuffDebug, 0xFF);
 		}
-		case US_S_ADC_REQUEST:
-		case US_S_ADC_RESPONSE:
-		case US_S_TEMP:
-			// Do nothing - ranging or temperature measurement in progress
-			break;
 	}
 }
 
@@ -675,6 +574,163 @@ void TestFSL() {
 
 // --------------------------------------------------------------------------------
 
+// Driving constants
+#define START_DELAY     10000
+
+#define FRONT_DIST      70
+#define REVERSE_DIST    40
+#define SIDE_DIST       40
+#define NEAR_CLEAR_DIST 80
+#define FAR_CLEAR_DIST  120
+
+#define SPEED_GO        40
+#define SPEED_STOP      0
+#define SPEED_TURN_FAST 30
+#define SPEED_TURN_SLOW 20
+#define SPEED_REVERSE   20
+
+void Init3PI() {
+	// Set manual mode
+	mpSetMode(0x00);
+	mpBeep();
+}
+
+void Drive3PI() {
+
+	switch (drivingState) {
+		case DRIVE_STOP:
+			if (sysTickCounter > START_DELAY) {
+				mpBeep();
+				nextDrivingState = DRIVE_FORWARD;
+			}
+			break;
+		case DRIVE_FORWARD:
+			if ((usarray_detect_obstacle(SENSOR_FRONT_RIGHT, FRONT_DIST)
+					|| usarray_detect_obstacle(SENSOR_FRONT_LEFT, FRONT_DIST))
+					&& !usarray_detect_obstacle(SENSOR_RIGHT_MID, FAR_CLEAR_DIST)) {
+				nextDrivingState = DRIVE_SPIN_RIGHT;
+			}
+			else if (usarray_detect_obstacle(SENSOR_FRONT_RIGHT, FRONT_DIST)
+					|| usarray_detect_obstacle(SENSOR_FRONT_LEFT, FRONT_DIST)) {
+				nextDrivingState = DRIVE_SPIN_LEFT;
+			}
+			else if (usarray_detect_obstacle(SENSOR_LEFT_MID, SIDE_DIST)
+					|| usarray_detect_obstacle(SENSOR_LEFT_FRONT, SIDE_DIST)) {
+				nextDrivingState = DRIVE_RIGHT;
+			}
+			else if (usarray_detect_obstacle(SENSOR_RIGHT_MID, SIDE_DIST)
+				|| usarray_detect_obstacle(SENSOR_RIGHT_FRONT, SIDE_DIST)) {
+				nextDrivingState = DRIVE_LEFT;
+			}
+			break;
+		case DRIVE_LEFT:
+			if ((usarray_detect_obstacle(SENSOR_FRONT_RIGHT, FRONT_DIST)
+					|| usarray_detect_obstacle(SENSOR_FRONT_LEFT, FRONT_DIST))
+					&& !usarray_detect_obstacle(SENSOR_RIGHT_MID, FAR_CLEAR_DIST)) {
+				nextDrivingState = DRIVE_SPIN_RIGHT;
+			}
+			else if (usarray_detect_obstacle(SENSOR_FRONT_RIGHT, FRONT_DIST)
+					|| usarray_detect_obstacle(SENSOR_FRONT_LEFT, FRONT_DIST)) {
+				nextDrivingState = DRIVE_SPIN_LEFT;
+			}
+			else if (!usarray_detect_obstacle(SENSOR_RIGHT_MID, SIDE_DIST)) {
+				nextDrivingState = DRIVE_FORWARD;
+			}
+			break;
+		case DRIVE_RIGHT:
+			if ((usarray_detect_obstacle(SENSOR_FRONT_RIGHT, FRONT_DIST)
+					|| usarray_detect_obstacle(SENSOR_FRONT_LEFT, FRONT_DIST))
+					&& !usarray_detect_obstacle(SENSOR_RIGHT_MID, FAR_CLEAR_DIST)) {
+				nextDrivingState = DRIVE_SPIN_RIGHT;
+			}
+			else if (usarray_detect_obstacle(SENSOR_FRONT_RIGHT, FRONT_DIST)
+					|| usarray_detect_obstacle(SENSOR_FRONT_LEFT, FRONT_DIST)) {
+				nextDrivingState = DRIVE_SPIN_LEFT;
+			}
+			else if (!usarray_detect_obstacle(SENSOR_LEFT_MID, SIDE_DIST)) {
+				nextDrivingState = DRIVE_FORWARD;
+			}
+			break;
+		case DRIVE_SPIN_LEFT:
+			if (!usarray_detect_obstacle(SENSOR_FRONT_RIGHT, NEAR_CLEAR_DIST)
+					&& !usarray_detect_obstacle(SENSOR_FRONT_LEFT, NEAR_CLEAR_DIST)
+					&& !usarray_detect_obstacle(SENSOR_RIGHT_FRONT, NEAR_CLEAR_DIST)) {
+				nextDrivingState = DRIVE_FORWARD;
+			}
+			else if (usarray_detect_obstacle(SENSOR_FRONT_RIGHT, SIDE_DIST)
+					|| usarray_detect_obstacle(SENSOR_FRONT_LEFT, SIDE_DIST)
+					|| usarray_detect_obstacle(SENSOR_RIGHT_FRONT, SIDE_DIST)
+					|| usarray_detect_obstacle(SENSOR_LEFT_FRONT, SIDE_DIST)) {
+				nextDrivingState = DRIVE_REVERSE_LEFT;
+			}
+			break;
+		case DRIVE_SPIN_RIGHT:
+			if (!usarray_detect_obstacle(SENSOR_FRONT_RIGHT, NEAR_CLEAR_DIST)
+					&& !usarray_detect_obstacle(SENSOR_FRONT_LEFT, NEAR_CLEAR_DIST)
+					&& !usarray_detect_obstacle(SENSOR_LEFT_FRONT, NEAR_CLEAR_DIST)) {
+				nextDrivingState = DRIVE_FORWARD;
+			}
+			else if (usarray_detect_obstacle(SENSOR_FRONT_RIGHT, SIDE_DIST)
+					|| usarray_detect_obstacle(SENSOR_FRONT_LEFT, SIDE_DIST)
+					|| usarray_detect_obstacle(SENSOR_RIGHT_FRONT, SIDE_DIST)
+					|| usarray_detect_obstacle(SENSOR_LEFT_FRONT, SIDE_DIST)) {
+				nextDrivingState = DRIVE_REVERSE_RIGHT;
+			}
+			break;
+		case DRIVE_REVERSE_LEFT:
+			if (!usarray_detect_obstacle(SENSOR_FRONT_RIGHT, SIDE_DIST)
+					&& !usarray_detect_obstacle(SENSOR_FRONT_LEFT, SIDE_DIST)) {
+				nextDrivingState = DRIVE_SPIN_LEFT;
+			}
+			break;
+		case DRIVE_REVERSE_RIGHT:
+			if (!usarray_detect_obstacle(SENSOR_FRONT_RIGHT, SIDE_DIST)
+					&& !usarray_detect_obstacle(SENSOR_FRONT_LEFT, SIDE_DIST)) {
+				nextDrivingState = DRIVE_SPIN_RIGHT;
+			}
+			break;
+		default:
+			mpSetMotorSpeed(PLATFORM_DIR_FORWARD, 0, 0);
+			break;
+	}
+
+
+	if (nextDrivingState != drivingState) {
+		switch (nextDrivingState) {
+			case DRIVE_STOP:
+				mpSetMotorSpeed(PLATFORM_DIR_FORWARD, SPEED_STOP, SPEED_STOP);
+				break;
+			case DRIVE_FORWARD:
+				mpSetMotorSpeed(PLATFORM_DIR_FORWARD, SPEED_GO, SPEED_GO);
+				break;
+			case DRIVE_LEFT:
+				mpSetMotorSpeed(PLATFORM_DIR_FORWARD, SPEED_TURN_SLOW, SPEED_TURN_FAST);
+				break;
+			case DRIVE_RIGHT:
+				mpSetMotorSpeed(PLATFORM_DIR_FORWARD, SPEED_TURN_FAST, SPEED_TURN_SLOW);
+				break;
+			case DRIVE_SPIN_LEFT:
+				mpSetMotorSpeed(PLATFORM_DIR_LEFT, SPEED_TURN_FAST, SPEED_TURN_FAST);
+				break;
+			case DRIVE_SPIN_RIGHT:
+				mpSetMotorSpeed(PLATFORM_DIR_RIGHT, SPEED_TURN_FAST, SPEED_TURN_FAST);
+				break;
+			case DRIVE_REVERSE_LEFT:
+				mpSetMotorSpeed(PLATFORM_DIR_REVERSE, SPEED_REVERSE, SPEED_REVERSE);
+				break;
+			case DRIVE_REVERSE_RIGHT:
+				mpSetMotorSpeed(PLATFORM_DIR_REVERSE, SPEED_REVERSE, SPEED_REVERSE);
+				break;
+			default:
+				break;
+		}
+
+		drivingState = nextDrivingState;
+	}
+}
+
+// --------------------------------------------------------------------------------
+
 void heartBeat() {
 	static unsigned int heartbeatTime = 0;
 	static unsigned char heartbeatState = 0;
@@ -682,7 +738,10 @@ void heartBeat() {
 	// Toggle heart beat every x ms
 	if(sysTickCounter > heartbeatTime) {
 		heartbeatState = ~heartbeatState;
-		gpio_write_bit(&gpioLEDS, 0, heartbeatState);
+		gpio_write_bit(&gpioLEDS, 0, heartbeatState && (drivingState == DRIVE_SPIN_LEFT || drivingState == DRIVE_REVERSE_LEFT || drivingState == DRIVE_REVERSE_RIGHT || drivingState == DRIVE_STOP));
+		gpio_write_bit(&gpioLEDS, 1, heartbeatState && (drivingState == DRIVE_FORWARD || drivingState == DRIVE_SPIN_LEFT || drivingState == DRIVE_LEFT || drivingState == DRIVE_STOP));
+		gpio_write_bit(&gpioLEDS, 2, heartbeatState && (drivingState == DRIVE_FORWARD || drivingState == DRIVE_SPIN_RIGHT || drivingState == DRIVE_RIGHT || drivingState == DRIVE_STOP));
+		gpio_write_bit(&gpioLEDS, 3, heartbeatState && (drivingState == DRIVE_SPIN_RIGHT || drivingState == DRIVE_REVERSE_LEFT || drivingState == DRIVE_REVERSE_RIGHT || drivingState == DRIVE_STOP));
 		heartbeatTime += HEARTBEAT_INTERVAL;
 	}
 }
