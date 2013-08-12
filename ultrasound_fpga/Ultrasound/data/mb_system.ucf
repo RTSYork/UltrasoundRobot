@@ -43,6 +43,3 @@ NET us_receiver_0_SPI_MISO_pin LOC = "G13"  |  IOSTANDARD = "LVCMOS33";
 NET us_receiver_0_SPI_MOSI_pin LOC = "H12"  |  IOSTANDARD = "LVCMOS33";
 NET us_receiver_0_SPI_SS_pin LOC = "E16"  |  IOSTANDARD = "LVCMOS33";
 NET us_receiver_0_ADC_DONE_pin LOC = "K12"  |  IOSTANDARD = "LVCMOS33";
-NET us_receiver_0_DEBUG_OUT_pin[0] LOC = "K13"  |  IOSTANDARD = "LVCMOS33";
-NET us_receiver_0_DEBUG_OUT_pin[1] LOC = "F17"  |  IOSTANDARD = "LVCMOS33";
-NET us_receiver_0_DEBUG_OUT_pin[2] LOC = "F18"  |  IOSTANDARD = "LVCMOS33";

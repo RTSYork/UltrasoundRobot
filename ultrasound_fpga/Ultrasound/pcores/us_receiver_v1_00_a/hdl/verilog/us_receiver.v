@@ -87,7 +87,6 @@ module us_receiver
 		SPI_MOSI,
 		SPI_SS,
 		ADC_DONE,
-		DEBUG_OUT,
 		// ADD USER PORTS ABOVE THIS LINE 
 
 		// DO NOT EDIT BELOW THIS LINE ////////////////////
@@ -113,7 +112,6 @@ input                                     SPI_MISO;
 output                                    SPI_MOSI;
 output                                    SPI_SS;
 input                                     ADC_DONE;
-output      [2 : 0]                       DEBUG_OUT;
 // ADD USER PORTS ABOVE THIS LINE 
 
 input                                     FSL_Clk;

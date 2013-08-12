@@ -45,6 +45,5 @@ PORT SPI_SS = "", DIR = O
 
 ## GPIO Ports
 PORT ADC_DONE = "", DIR = I, INITIALVAL=VCC
-PORT DEBUG_OUT = "", DIR = O, VEC = [2:0]
 
 END

@@ -47,7 +47,6 @@
  PORT us_receiver_0_SPI_MOSI_pin = us_receiver_0_SPI_MOSI, DIR = O
  PORT us_receiver_0_SPI_SS_pin = us_receiver_0_SPI_SS, DIR = O
  PORT us_receiver_0_ADC_DONE_pin = net_us_receiver_0_ADC_DONE_pin, DIR = I
- PORT us_receiver_0_DEBUG_OUT_pin = us_receiver_0_DEBUG_OUT, DIR = O, VEC = [2:0]
 
 
 BEGIN proc_sys_reset
@@ -372,7 +371,6 @@ BEGIN us_receiver
  PORT SPI_MOSI = us_receiver_0_SPI_MOSI
  PORT SPI_SS = us_receiver_0_SPI_SS
  PORT ADC_DONE = net_us_receiver_0_ADC_DONE_pin
- PORT DEBUG_OUT = us_receiver_0_DEBUG_OUT
 END
 
 BEGIN fsl_v20
